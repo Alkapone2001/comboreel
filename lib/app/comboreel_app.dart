@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
-import '../features/home/presentation/home_screen.dart';
+import 'app_shell.dart';
 
 class ComboReelApp extends StatelessWidget {
   const ComboReelApp({super.key});
@@ -11,6 +11,6 @@ class ComboReelApp extends StatelessWidget {
     title: 'ComboReel',
     debugShowCheckedModeBanner: false,
     theme: AppTheme.dark,
-    home: const HomeScreen(),
+    home: const AppShell(),
   );
 }

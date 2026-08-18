@@ -4,32 +4,32 @@ import '../../../core/theme/app_theme.dart';
 import '../data/demo_series.dart';
 import '../domain/series.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({
+    super.key,
+    required this.onOpenSeries,
+    required this.onPlay,
+  });
+
+  final VoidCallback onOpenSeries;
+  final VoidCallback onPlay;
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int selectedIndex = 0;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    extendBody: true,
-    body: SafeArea(
-      bottom: false,
-      child: CustomScrollView(
-        slivers: [
+  Widget build(BuildContext context) => SafeArea(
+    bottom: false,
+    child: CustomScrollView(
+      slivers: [
           const SliverToBoxAdapter(child: _TopBar()),
-          const SliverToBoxAdapter(child: _HeroBanner()),
+          SliverToBoxAdapter(
+            child: _HeroBanner(onOpenSeries: onOpenSeries, onPlay: onPlay),
+          ),
           SliverToBoxAdapter(
             child: _SeriesSection(
               title: 'Continue Watching',
               width: 210,
               height: 132,
               series: continueWatching,
-              builder: (item) => _ContinueCard(series: item),
+              builder: (item) => _ContinueCard(series: item, onTap: onPlay),
             ),
           ),
           SliverToBoxAdapter(
@@ -38,37 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 148,
               height: 238,
               series: trendingSeries,
-              builder: (item) => _PosterCard(series: item),
+              builder: (item) => _PosterCard(series: item, onTap: onOpenSeries),
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 110)),
-        ],
-      ),
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (value) => setState(() => selectedIndex = value),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.explore_outlined),
-          selectedIcon: Icon(Icons.explore),
-          label: 'Discover',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.monetization_on_outlined),
-          selectedIcon: Icon(Icons.monetization_on),
-          label: 'Coins',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
-          label: 'Profile',
-        ),
       ],
     ),
   );
@@ -124,7 +97,10 @@ class _TopBar extends StatelessWidget {
 }
 
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner();
+  const _HeroBanner({required this.onOpenSeries, required this.onPlay});
+
+  final VoidCallback onOpenSeries;
+  final VoidCallback onPlay;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -190,7 +166,7 @@ class _HeroBanner extends StatelessWidget {
                   runSpacing: 10,
                   children: [
                     FilledButton.icon(
-                      onPressed: () {},
+                      onPressed: onPlay,
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
@@ -203,7 +179,7 @@ class _HeroBanner extends StatelessWidget {
                       label: const Text('Watch free'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: onOpenSeries,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Color(0x66FFFFFF)),
@@ -275,13 +251,17 @@ class _SeriesSection extends StatelessWidget {
 }
 
 class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.series});
+  const _ContinueCard({required this.series, required this.onTap});
   final DramaSeries series;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => _Artwork(
-    series: series,
-    child: Padding(
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(18),
+    child: _Artwork(
+      series: series,
+      child: Padding(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,16 +295,21 @@ class _ContinueCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
     ),
   );
 }
 
 class _PosterCard extends StatelessWidget {
-  const _PosterCard({required this.series});
+  const _PosterCard({required this.series, required this.onTap});
   final DramaSeries series;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(18),
+    child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Expanded(
@@ -362,7 +347,8 @@ class _PosterCard extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(color: AppColors.muted, fontSize: 12),
       ),
-    ],
+      ],
+    ),
   );
 }
 
