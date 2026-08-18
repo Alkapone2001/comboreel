@@ -1,17 +1,50 @@
-# comboreel
+# ComboReel
 
-A new Flutter project.
+ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and web. The current build includes the branded discovery experience, functional navigation, series and locked-episode flows, a vertical-player prototype, Supabase schema, and authentication foundations.
 
-## Getting Started
+## Requirements
 
-This project is a starting point for a Flutter application.
+- Flutter 3.47 or a compatible stable release
+- Dart 3.13 or compatible
+- Chrome for web development
+- A Supabase project when testing live backend features
 
-A few resources to get you started if this is your first Flutter project:
+## Run the UI prototype
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+The app intentionally runs without credentials using deterministic demo content:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter run -d chrome
+```
+
+## Run with Supabase staging
+
+Use only the public project URL and publishable key in the client:
+
+```powershell
+flutter run -d chrome `
+  --dart-define=SUPABASE_URL=https://your-project.supabase.co `
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+Never add secret keys, service-role keys, payment secrets, or webhook secrets to Dart source, build arguments used in public logs, or committed files.
+
+## Verify
+
+```powershell
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze
+flutter test
+flutter build web
+```
+
+## Project layout
+
+- `lib/app`: application shell and navigation ownership
+- `lib/core`: configuration, services, and design system
+- `lib/features`: feature-first data, domain, and presentation code
+- `supabase/migrations`: authoritative database changes
+- `test`: widget and domain model tests
+- `PROJECT_PLAN.md`: living delivery scope and milestone status
+
+See `supabase/README.md` for database deployment and security guidance.

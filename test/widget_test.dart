@@ -31,7 +31,7 @@ void main() {
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Your profile'), findsOneWidget);
+    expect(find.text('Your ComboReel profile'), findsOneWidget);
   });
 
   testWidgets('featured series opens details and starts playback', (

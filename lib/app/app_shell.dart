@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../core/services/app_services.dart';
 import '../core/theme/app_theme.dart';
+import '../features/auth/presentation/profile_screen.dart';
 import '../features/home/data/demo_series.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/player/presentation/episode_player_screen.dart';
 import '../features/series/presentation/series_detail_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, required this.services});
+
+  final AppServices services;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -46,10 +50,9 @@ class _AppShellState extends State<AppShell> {
         message: 'Your coin balance, daily rewards, rewarded ads, and purchase packs will live here.',
         accent: AppColors.gold,
       ),
-      const _PlaceholderPage(
-        icon: Icons.person_rounded,
-        title: 'Your profile',
-        message: 'Watch history, favourites, subscription, language, and account controls will live here.',
+      ProfileScreen(
+        authRepository: widget.services.authRepository,
+        backendConfigured: widget.services.backendConfigured,
       ),
     ];
 

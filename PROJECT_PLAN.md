@@ -32,9 +32,11 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 
 ### 2. Catalogue and playback
 
-- [ ] Define Supabase schema and local development configuration
-- [ ] Implement authentication and profiles
-- [ ] Load series, seasons, and episodes from repositories
+- [x] Define the initial Supabase schema, indexes, triggers, and RLS policies
+- [x] Add environment-based Supabase bootstrap and authentication repository
+- [x] Build sign-in, registration, signed-in, and offline profile states
+- [x] Define typed catalogue and viewer-library repositories
+- [ ] Connect home, series, seasons, and episodes to live repositories
 - [x] Build the vertical player interface foundation
 - [ ] Connect the player to Cloudflare Stream
 - [ ] Store watch progress and Continue Watching state
@@ -68,7 +70,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Define the Supabase schema, local environment strategy, repository contracts, and authentication flow before adding live service dependencies.
+Create a staging Supabase project, apply the reviewed migration, configure authentication URLs, and connect the home catalogue to live repository data with offline/error/loading states.
 
 ## Implementation status notes
 
@@ -77,3 +79,5 @@ Define the Supabase schema, local environment strategy, repository contracts, an
 - The episode player currently demonstrates the intended controls and interaction hierarchy; it does not stream video yet.
 - Episode 1–5 free and later episodes locked is represented in the UI, but entitlements are not yet persisted or server verified.
 - Discover, Coins, and Profile are functional navigation destinations with intentional placeholders for their upcoming feature milestones.
+- Supabase initialization is opt-in through compile-time definitions; no credentials or secret keys are stored in the repository.
+- The schema migration has been executed successfully against a clean PostgreSQL 16 container. Live Supabase Auth/RLS integration still requires a staging project.
