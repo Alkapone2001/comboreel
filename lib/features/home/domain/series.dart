@@ -1,0 +1,19 @@
+import 'package:flutter/material.dart';
+
+class DramaSeries {
+  const DramaSeries({
+    required this.title,
+    required this.genre,
+    required this.episodeLabel,
+    required this.colors,
+    this.progress,
+    this.badge,
+  });
+
+  final String title;
+  final String genre;
+  final String episodeLabel;
+  final List<Color> colors;
+  final double? progress;
+  final String? badge;
+}
