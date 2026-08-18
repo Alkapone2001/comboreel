@@ -19,19 +19,15 @@ class _AppShellState extends State<AppShell> {
   void _openSeries() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => SeriesDetailScreen(
-          series: featuredSeries,
-          onWatch: _openPlayer,
-        ),
+        builder: (_) =>
+            SeriesDetailScreen(series: featuredSeries, onWatch: _openPlayer),
       ),
     );
   }
 
   void _openPlayer() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const EpisodePlayerScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const EpisodePlayerScreen()),
     );
   }
 
@@ -62,12 +58,29 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (value) => setState(() => _selectedIndex = value),
+        onDestinationSelected: (value) =>
+            setState(() => _selectedIndex = value),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Discover'),
-          NavigationDestination(icon: Icon(Icons.monetization_on_outlined), selectedIcon: Icon(Icons.monetization_on), label: 'Coins'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore),
+            label: 'Discover',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.monetization_on_outlined),
+            selectedIcon: Icon(Icons.monetization_on),
+            label: 'Coins',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -100,13 +113,24 @@ class _PlaceholderPage extends StatelessWidget {
               Container(
                 width: 76,
                 height: 76,
-                decoration: BoxDecoration(color: accent.withValues(alpha: .14), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .14),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, color: accent, size: 38),
               ),
               const SizedBox(height: 24),
-              Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 12),
-              Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.5)),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.muted, height: 1.5),
+              ),
             ],
           ),
         ),

@@ -19,29 +19,29 @@ class HomeScreen extends StatelessWidget {
     bottom: false,
     child: CustomScrollView(
       slivers: [
-          const SliverToBoxAdapter(child: _TopBar()),
-          SliverToBoxAdapter(
-            child: _HeroBanner(onOpenSeries: onOpenSeries, onPlay: onPlay),
+        const SliverToBoxAdapter(child: _TopBar()),
+        SliverToBoxAdapter(
+          child: _HeroBanner(onOpenSeries: onOpenSeries, onPlay: onPlay),
+        ),
+        SliverToBoxAdapter(
+          child: _SeriesSection(
+            title: 'Continue Watching',
+            width: 210,
+            height: 132,
+            series: continueWatching,
+            builder: (item) => _ContinueCard(series: item, onTap: onPlay),
           ),
-          SliverToBoxAdapter(
-            child: _SeriesSection(
-              title: 'Continue Watching',
-              width: 210,
-              height: 132,
-              series: continueWatching,
-              builder: (item) => _ContinueCard(series: item, onTap: onPlay),
-            ),
+        ),
+        SliverToBoxAdapter(
+          child: _SeriesSection(
+            title: 'Trending Now',
+            width: 148,
+            height: 238,
+            series: trendingSeries,
+            builder: (item) => _PosterCard(series: item, onTap: onOpenSeries),
           ),
-          SliverToBoxAdapter(
-            child: _SeriesSection(
-              title: 'Trending Now',
-              width: 148,
-              height: 238,
-              series: trendingSeries,
-              builder: (item) => _PosterCard(series: item, onTap: onOpenSeries),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 110)),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 110)),
       ],
     ),
   );
@@ -262,39 +262,39 @@ class _ContinueCard extends StatelessWidget {
     child: _Artwork(
       series: series,
       child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  series.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    series.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
-              ),
-              const Icon(Icons.play_circle_fill_rounded),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            series.episodeLabel,
-            style: const TextStyle(fontSize: 12, color: Color(0xFFCECED5)),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: series.progress,
-            minHeight: 3,
-            borderRadius: BorderRadius.circular(3),
-            backgroundColor: Colors.white24,
-            color: AppColors.coral,
-          ),
-        ],
-      ),
+                const Icon(Icons.play_circle_fill_rounded),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              series.episodeLabel,
+              style: const TextStyle(fontSize: 12, color: Color(0xFFCECED5)),
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: series.progress,
+              minHeight: 3,
+              borderRadius: BorderRadius.circular(3),
+              backgroundColor: Colors.white24,
+              color: AppColors.coral,
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -310,43 +310,43 @@ class _PosterCard extends StatelessWidget {
     onTap: onTap,
     borderRadius: BorderRadius.circular(18),
     child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: _Artwork(
-          series: series,
-          child: Stack(
-            children: [
-              Positioned(
-                top: 10,
-                left: 10,
-                child: _Badge(label: series.badge!),
-              ),
-              const Center(
-                child: Icon(
-                  Icons.play_circle_outline_rounded,
-                  size: 44,
-                  color: Color(0xCCFFFFFF),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _Artwork(
+            series: series,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: _Badge(label: series.badge!),
                 ),
-              ),
-            ],
+                const Center(
+                  child: Icon(
+                    Icons.play_circle_outline_rounded,
+                    size: 44,
+                    color: Color(0xCCFFFFFF),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 9),
-      Text(
-        series.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ),
-      const SizedBox(height: 3),
-      Text(
-        series.genre,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: AppColors.muted, fontSize: 12),
-      ),
+        const SizedBox(height: 9),
+        Text(
+          series.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          series.genre,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppColors.muted, fontSize: 12),
+        ),
       ],
     ),
   );
