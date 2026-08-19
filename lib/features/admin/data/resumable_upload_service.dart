@@ -16,10 +16,14 @@ class ResumableUploadService {
       metadata: {'name': file.name, 'requiresignedurls': 'true'},
       timeout: const Duration(minutes: 3),
     );
-    await client.startUpload(
-      onProgress: (uploaded, total, _) {
-        onProgress(total == 0 ? 0 : uploaded / total);
-      },
-    );
+    try {
+      await client.startUpload(
+        onProgress: (uploaded, total, _) {
+          onProgress(total == 0 ? 0 : uploaded / total);
+        },
+      );
+    } finally {
+      client.close();
+    }
   }
 }

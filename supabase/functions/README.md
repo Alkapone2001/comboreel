@@ -106,5 +106,6 @@ Authenticates the viewer and provides a portable JSON export, active-subscriptio
 deletion preview, and irreversible account deletion. Deletion requires a JWT
 issued within ten minutes, disables push devices, deletes a linked Stripe customer
 when configured, and removes the Supabase Auth user so cascading application data
-is erased. Deploy with JWT verification enabled and set `STRIPE_SECRET_KEY` when
-web billing is enabled.
+is erased. Deploy with JWT verification enabled, set `ALLOWED_ORIGINS` to the
+exact staging/production web origins, and set `STRIPE_SECRET_KEY` when web billing
+is enabled.

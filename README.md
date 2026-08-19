@@ -36,6 +36,10 @@ flutter run -d chrome `
 
 Never add secret keys, service-role keys, payment secrets, or webhook secrets to Dart source, build arguments used in public logs, or committed files.
 
+Android production builds require Java 17+, the Android SDK, and an ignored
+`android/key.properties` based on `android/key.properties.example`. Release
+configuration never falls back to the debug signing key.
+
 For mobile rewarded ads, provide `ADMOB_ANDROID_REWARDED_AD_UNIT_ID` and
 `ADMOB_IOS_REWARDED_AD_UNIT_ID` as Dart defines. The committed manifests contain
 Google's development app IDs; replace them with ComboReel's AdMob app IDs before
