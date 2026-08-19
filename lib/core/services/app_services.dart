@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/offline_auth_repository.dart';
 import '../../features/auth/data/supabase_auth_repository.dart';
+import '../../features/admin/data/admin_repository.dart';
+import '../../features/admin/data/supabase_admin_repository.dart';
 import '../../features/catalogue/data/catalogue_repository.dart';
 import '../../features/catalogue/data/offline_catalogue_repository.dart';
 import '../../features/catalogue/data/supabase_catalogue_repository.dart';
@@ -31,6 +33,7 @@ class AppServices {
     required this.catalogueRepository,
     required this.viewerLibraryRepository,
     required this.monetizationRepository,
+    this.adminRepository = const UnavailableAdminRepository(),
     this.rewardedAdService = const UnavailableRewardedAdService(),
     this.storePurchaseService = const UnavailableStorePurchaseService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
@@ -42,6 +45,7 @@ class AppServices {
     catalogueRepository: const OfflineCatalogueRepository(),
     viewerLibraryRepository: OfflineViewerLibraryRepository(),
     monetizationRepository: OfflineMonetizationRepository(),
+    adminRepository: const UnavailableAdminRepository(),
     rewardedAdService: const DemoRewardedAdService(),
     storePurchaseService: DemoStorePurchaseService(),
   );
@@ -51,6 +55,7 @@ class AppServices {
   final CatalogueRepository catalogueRepository;
   final ViewerLibraryRepository viewerLibraryRepository;
   final MonetizationRepository monetizationRepository;
+  final AdminRepository adminRepository;
   final RewardedAdService rewardedAdService;
   final StorePurchaseService storePurchaseService;
   final PlaybackRepository playbackRepository;
@@ -66,6 +71,7 @@ class AppServices {
         catalogueRepository: const OfflineCatalogueRepository(),
         viewerLibraryRepository: OfflineViewerLibraryRepository(),
         monetizationRepository: OfflineMonetizationRepository(),
+        adminRepository: const UnavailableAdminRepository(),
         rewardedAdService: const DemoRewardedAdService(),
         storePurchaseService: DemoStorePurchaseService(),
       );
@@ -87,6 +93,7 @@ class AppServices {
       monetizationRepository: SupabaseMonetizationRepository(
         Supabase.instance.client,
       ),
+      adminRepository: SupabaseAdminRepository(Supabase.instance.client),
       rewardedAdService: AdMobRewardedAdService(
         androidAdUnitId: config.admobAndroidRewardedAdUnitId,
         iosAdUnitId: config.admobIosRewardedAdUnitId,

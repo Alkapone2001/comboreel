@@ -13,6 +13,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - App Store Connect and Google Play products plus server API credentials for mobile purchases
 - Stripe products, Checkout, webhook, and Billing Portal configuration for web purchases
 - App Store Server Notifications V2 and authenticated Google Play RTDN configuration
+- A Cloudflare Stream API token with Stream edit access for Creator Studio uploads
 
 ## Run the UI prototype
 
@@ -50,6 +51,20 @@ Configured web builds use Stripe-hosted Checkout and the Billing Portal. Create
 matching Stripe Products and Prices, supply their IDs through `STRIPE_PRICE_MAP`,
 and register the public `stripe-webhook` URL for the documented event list. Coin
 or premium value is granted only by the signature-verified webhook.
+
+## Creator Studio
+
+Authenticated profiles with the `editor` or `admin` role see **Creator Studio**
+in Profile. The responsive web workspace manages series and episodes, verifies
+publishing requirements, uploads video directly to Cloudflare with resumable TUS
+chunks, and polls encoding status. The browser never receives a Cloudflare API
+token; `admin-stream` provisions a one-time upload URL after checking the role.
+
+Deploy `admin-stream` with the existing Supabase secrets plus
+`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`, and `ALLOWED_ORIGINS`.
+Apply `202608190007_admin_content.sql` before deployment. Assign the first admin
+through a trusted service-role environment; ordinary authenticated users and
+editors cannot change roles.
 
 ## Verify
 

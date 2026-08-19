@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_user.dart';
+import '../../admin/data/admin_repository.dart';
+import '../../admin/domain/admin_models.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -10,11 +12,15 @@ class ProfileScreen extends StatelessWidget {
     required this.authRepository,
     required this.backendConfigured,
     required this.onOpenMyList,
+    required this.adminRepository,
+    required this.onOpenAdmin,
   });
 
   final AuthRepository authRepository;
   final bool backendConfigured;
   final VoidCallback onOpenMyList;
+  final AdminRepository adminRepository;
+  final VoidCallback onOpenAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +36,8 @@ class ProfileScreen extends StatelessWidget {
               user: snapshot.data!,
               repository: authRepository,
               onOpenMyList: onOpenMyList,
+              adminRepository: adminRepository,
+              onOpenAdmin: onOpenAdmin,
             ),
     );
   }
@@ -297,10 +305,14 @@ class _SignedInProfile extends StatelessWidget {
     required this.user,
     required this.repository,
     required this.onOpenMyList,
+    required this.adminRepository,
+    required this.onOpenAdmin,
   });
   final AuthUser user;
   final AuthRepository repository;
   final VoidCallback onOpenMyList;
+  final AdminRepository adminRepository;
+  final VoidCallback onOpenAdmin;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -335,6 +347,20 @@ class _SignedInProfile extends StatelessWidget {
         const _ProfileTile(
           icon: Icons.settings_outlined,
           title: 'Account settings',
+        ),
+        FutureBuilder<AdminRole>(
+          future: adminRepository.currentRole(),
+          builder: (context, snapshot) {
+            if (snapshot.data != AdminRole.editor &&
+                snapshot.data != AdminRole.admin) {
+              return const SizedBox.shrink();
+            }
+            return _ProfileTile(
+              icon: Icons.video_settings_outlined,
+              title: 'Creator Studio',
+              onTap: onOpenAdmin,
+            );
+          },
         ),
         const SizedBox(height: 18),
         OutlinedButton.icon(

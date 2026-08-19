@@ -10,8 +10,8 @@ Supabase row-level security protects direct client access. Trusted mutations—c
 
 - Public catalogue: published series, seasons, episodes, genres, and subtitles.
 - Viewer-owned: profile-safe fields, favourites, and watch progress.
-- Server-owned: roles, wallets, coin transactions, subscriptions, entitlements, stream identifiers, and publishing state.
-- Admin-managed: catalogue and subtitle metadata. Editors and admins use protected role checks.
+- Server-owned: roles, wallets, coin transactions, subscriptions, entitlements, and upload-processing state.
+- Admin-managed: catalogue, subtitle metadata, and publishing state. Editors and admins use protected role checks and database publication validation.
 
 ## Access decisions
 
@@ -42,6 +42,15 @@ Use separate local, staging, and production environments. Schema changes origina
 Published Cloudflare Stream videos must have signed URLs required. Flutter requests an episode session from the `playback-session` Edge Function. The function checks free status or calls the entitlement RPC as the authenticated viewer, then obtains a short-lived Cloudflare token and returns the direct HLS manifest URL with `Cache-Control: no-store`.
 
 The Cloudflare account ID, scoped Stream API token, customer code, and Supabase service-role key exist only in Edge Function secrets. HLS manifests are read directly from Cloudflare and must not be cached or proxied. Production and staging web origins are allowlisted separately.
+
+Creator Studio requests a one-time direct-upload endpoint through `admin-stream`.
+That function authenticates the user, verifies an Editor/Admin profile with the
+service client, provisions signed-only Cloudflare media, and records server-owned
+upload state. Flutter sends the file directly to that endpoint in resumable TUS
+chunks of 10 MiB and polls processing status; it never receives the Stream API
+token. Database triggers reject incomplete publication and append series,
+season, episode, and subtitle mutations to an immutable audit log. Profile role
+assignment is service-role-only, preventing an editor from self-promoting.
 
 ## Rewarded-ad integrity
 

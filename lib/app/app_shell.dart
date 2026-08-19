@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/services/app_services.dart';
 import '../features/auth/presentation/profile_screen.dart';
+import '../features/admin/presentation/admin_dashboard_screen.dart';
 import '../features/discover/presentation/discover_screen.dart';
 import '../features/catalogue/domain/catalogue_episode.dart';
 import '../features/home/domain/series.dart';
@@ -87,6 +88,15 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  void _openAdmin() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            AdminDashboardScreen(repository: widget.services.adminRepository),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
@@ -110,6 +120,8 @@ class _AppShellState extends State<AppShell> {
         authRepository: widget.services.authRepository,
         backendConfigured: widget.services.backendConfigured,
         onOpenMyList: _openMyList,
+        adminRepository: widget.services.adminRepository,
+        onOpenAdmin: _openAdmin,
       ),
     ];
 

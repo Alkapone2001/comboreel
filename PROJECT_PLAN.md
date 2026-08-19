@@ -56,11 +56,11 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Add Stripe Checkout and webhooks for web purchases
 - [x] Add provider notifications and full refund/renewal reconciliation
 
-### 4. Admin and operations
+### 4. Admin and operations — in progress
 
-- [ ] Build role-protected series and episode management
-- [ ] Add upload workflow and Cloudflare processing status
-- [ ] Add catalogue publishing controls
+- [x] Build role-protected series and episode management
+- [x] Add upload workflow and Cloudflare processing status
+- [x] Add catalogue publishing controls
 - [ ] Add analytics dashboards and push campaigns
 
 ### 5. Release readiness
@@ -76,7 +76,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Provision staging Supabase, Cloudflare, and AdMob resources; deploy both Edge Functions, configure private test streams and the AdMob SSV callback, then run signed-stream and rewarded-unlock tests on real iOS/Android devices.
+Add first-party product analytics events and the role-protected operations dashboard, then connect push-campaign composition and delivery. Provider staging resources still need provisioning for end-to-end video, advertising, store, and payment verification.
 
 ## Implementation status notes
 
@@ -95,3 +95,4 @@ Provision staging Supabase, Cloudflare, and AdMob resources; deploy both Edge Fu
 - Restore Purchases re-verifies owned subscriptions. App Store Server Notifications V2 and authenticated Google RTDN reconcile renewals, grace, pause, cancellation, expiry, revocation, and refunds while the app is closed.
 - Web purchases use authenticated Stripe Checkout, a raw-body signature-verified webhook, event/session idempotency, and the Stripe Billing Portal. Live products and endpoints still require provider provisioning.
 - Playback sessions are authorized server-side and return short-lived, non-cacheable signed Cloudflare HLS URLs. Flutter includes HLS lifecycle, resume persistence, subtitles, and offline/error behavior; provider staging verification is still required.
+- Creator Studio is available only to authenticated Editor/Admin profiles. It supports responsive series and episode editing, pricing, publication, resumable direct-to-Cloudflare uploads, processing polling, and immutable content audit history. Editors cannot assign roles; role changes require service-role server code.
