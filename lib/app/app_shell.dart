@@ -7,6 +7,7 @@ import '../features/auth/presentation/profile_screen.dart';
 import '../features/admin/presentation/admin_dashboard_screen.dart';
 import '../features/discover/presentation/discover_screen.dart';
 import '../features/catalogue/domain/catalogue_episode.dart';
+import '../features/catalogue/domain/catalogue_series.dart';
 import '../features/home/domain/series.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/library/presentation/my_list_screen.dart';
@@ -25,14 +26,17 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
-  StreamSubscription<Uri>? _deepLinkSubscription;
+  final List<StreamSubscription<Uri>> _deepLinkSubscriptions = [];
 
   @override
   void initState() {
     super.initState();
     unawaited(widget.services.analyticsRepository.track('app_opened'));
-    _deepLinkSubscription = widget.services.pushNotificationService.deepLinks
-        .listen(_openDeepLink);
+    _deepLinkSubscriptions
+      ..add(
+        widget.services.pushNotificationService.deepLinks.listen(_openDeepLink),
+      )
+      ..add(widget.services.deepLinkService.links.listen(_openDeepLink));
     final initialDeepLink = Uri.tryParse(
       Uri.base.queryParameters['deep_link'] ?? '',
     );
@@ -43,19 +47,67 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
-  void _openDeepLink(Uri uri) {
+  Future<void> _openDeepLink(Uri uri) async {
     if (!mounted) return;
     const destinations = {'home': 0, 'discover': 1, 'coins': 2, 'profile': 3};
-    final destination = uri.host.isNotEmpty
-        ? uri.host
-        : uri.pathSegments.firstOrNull;
+    final segments = uri.scheme == 'comboreel'
+        ? [if (uri.host.isNotEmpty) uri.host, ...uri.pathSegments]
+        : uri.pathSegments;
+    final destination = segments.firstOrNull;
     final index = destinations[destination];
-    if (index != null) setState(() => _selectedIndex = index);
+    if (index != null) {
+      setState(() => _selectedIndex = index);
+      return;
+    }
+    if (destination != 'series' || segments.length < 2) return;
+    try {
+      final items = await widget.services.catalogueRepository.latestSeries(
+        limit: 100,
+      );
+      final catalogue = items
+          .where((item) => item.id == segments[1])
+          .firstOrNull;
+      if (catalogue == null || !mounted) throw StateError('story_not_found');
+      if (segments.length >= 4 && segments[2] == 'episode') {
+        final episodes = await widget.services.catalogueRepository
+            .episodesForSeries(catalogue.id);
+        final episode = episodes
+            .where((item) => item.id == segments[3])
+            .firstOrNull;
+        if (episode == null || !mounted) throw StateError('episode_not_found');
+        _openPlayer(episode);
+      } else {
+        _openSeries(_presentation(catalogue));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('That shared story is not available.')),
+        );
+      }
+    }
   }
+
+  DramaSeries _presentation(CatalogueSeries series) => DramaSeries(
+    id: series.id,
+    title: series.title,
+    genre: series.genres.join(' · '),
+    episodeLabel: '${series.episodeCount} episodes',
+    colors: const [Color(0xFF6B233F), Color(0xFF19101C), Color(0xFF09090C)],
+    synopsis: series.synopsis,
+    releaseYear: series.releaseYear,
+    ageRating: series.ageRating,
+    originalLanguage: series.originalLanguage,
+    episodeCount: series.episodeCount,
+    posterUrl: series.posterUrl,
+    heroUrl: series.heroUrl,
+  );
 
   @override
   void dispose() {
-    unawaited(_deepLinkSubscription?.cancel());
+    for (final subscription in _deepLinkSubscriptions) {
+      unawaited(subscription.cancel());
+    }
     super.dispose();
   }
 
@@ -86,6 +138,7 @@ class _AppShellState extends State<AppShell> {
             setState(() => _selectedIndex = 2);
           },
           analyticsRepository: widget.services.analyticsRepository,
+          contentShareService: widget.services.contentShareService,
         ),
       ),
     );
@@ -108,6 +161,7 @@ class _AppShellState extends State<AppShell> {
           viewerLibraryRepository: widget.services.viewerLibraryRepository,
           playbackRepository: widget.services.playbackRepository,
           viewerId: _viewerId,
+          contentShareService: widget.services.contentShareService,
         ),
       ),
     );

@@ -34,6 +34,8 @@ import '../../features/player/data/supabase_playback_repository.dart';
 import '../../features/privacy/data/privacy_repository.dart';
 import '../../features/privacy/data/supabase_privacy_repository.dart';
 import '../config/app_config.dart';
+import 'content_share_service.dart';
+import 'deep_link_service.dart';
 
 class AppServices {
   const AppServices({
@@ -50,6 +52,8 @@ class AppServices {
     this.storePurchaseService = const UnavailableStorePurchaseService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
     this.privacyRepository = const UnavailablePrivacyRepository(),
+    this.deepLinkService = const NoopDeepLinkService(),
+    this.contentShareService = const NoopContentShareService(),
   });
 
   factory AppServices.offline() => AppServices(
@@ -79,11 +83,14 @@ class AppServices {
   final StorePurchaseService storePurchaseService;
   final PlaybackRepository playbackRepository;
   final PrivacyRepository privacyRepository;
+  final DeepLinkService deepLinkService;
+  final ContentShareService contentShareService;
 
   bool get backendConfigured => config.hasSupabase;
 
   static Future<AppServices> bootstrap() async {
     final config = AppConfig.fromEnvironment();
+    final deepLinks = AppLinksDeepLinkService();
     if (!config.hasSupabase) {
       return AppServices(
         config: config,
@@ -97,6 +104,8 @@ class AppServices {
         pushCampaignRepository: const UnavailablePushCampaignRepository(),
         rewardedAdService: const DemoRewardedAdService(),
         storePurchaseService: DemoStorePurchaseService(),
+        deepLinkService: deepLinks,
+        contentShareService: SystemContentShareService(config.publicAppUrl),
       );
     }
 
@@ -154,6 +163,8 @@ class AppServices {
           : const UnavailableStorePurchaseService(),
       playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),
       privacyRepository: SupabasePrivacyRepository(Supabase.instance.client),
+      deepLinkService: deepLinks,
+      contentShareService: SystemContentShareService(config.publicAppUrl),
     );
   }
 }

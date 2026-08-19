@@ -9,6 +9,7 @@ class AppConfig {
     this.firebaseMessagingSenderId = '',
     this.firebaseProjectId = '',
     this.firebaseWebVapidKey = '',
+    this.publicAppUrl = '',
   });
 
   factory AppConfig.fromEnvironment() => const AppConfig(
@@ -27,6 +28,7 @@ class AppConfig {
     ),
     firebaseProjectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
     firebaseWebVapidKey: String.fromEnvironment('FIREBASE_WEB_VAPID_KEY'),
+    publicAppUrl: String.fromEnvironment('PUBLIC_APP_URL'),
   );
 
   final String supabaseUrl;
@@ -38,6 +40,7 @@ class AppConfig {
   final String firebaseMessagingSenderId;
   final String firebaseProjectId;
   final String firebaseWebVapidKey;
+  final String publicAppUrl;
 
   bool get hasSupabase =>
       supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;

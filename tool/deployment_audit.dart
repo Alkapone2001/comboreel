@@ -47,6 +47,10 @@ void main() {
     !deploy.contains('STRIPE_SECRET_KEY'),
     'Stripe secrets must never enter a client deployment workflow.',
   );
+  require(
+    deploy.contains('PUBLIC_APP_URL'),
+    'Staging deployment must configure canonical HTTPS share links.',
+  );
 
   final databaseContracts = Directory('supabase/tests')
       .listSync()

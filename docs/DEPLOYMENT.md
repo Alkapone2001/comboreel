@@ -19,6 +19,7 @@ Environment variables (public configuration):
 | `FIREBASE_MESSAGING_SENDER_ID` | Public messaging sender ID |
 | `FIREBASE_PROJECT_ID` | Firebase project ID |
 | `CLOUDFLARE_PAGES_PROJECT` | Existing Pages project name |
+| `PUBLIC_APP_URL` | Canonical staging HTTPS origin used in shared links |
 
 Environment secrets:
 
@@ -65,6 +66,8 @@ After deployment, record the commit SHA and verify:
 
 - `/`, `/privacy`, `/terms`, and `/delete-account` return successful HTTPS pages
   with security headers and no mixed content.
+- A shared HTTPS episode link opens the matching story on web; `comboreel://home`,
+  `comboreel://series/{id}`, and episode links open the installed iOS/Android app.
 - Create and confirm an account; verify legal-consent rows, sign-in, sign-out, and
   password reauthentication.
 - Load catalogue artwork, a signed HLS stream, subtitles, progress, favourites,

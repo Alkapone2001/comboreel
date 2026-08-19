@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_artwork.dart';
+import '../../../core/services/content_share_service.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../catalogue/domain/catalogue_season.dart';
@@ -26,6 +27,7 @@ class SeriesDetailScreen extends StatelessWidget {
     required this.onWatch,
     required this.onOpenPremium,
     this.analyticsRepository = const NoopAnalyticsRepository(),
+    this.contentShareService = const NoopContentShareService(),
   });
 
   final DramaSeries series;
@@ -37,6 +39,20 @@ class SeriesDetailScreen extends StatelessWidget {
   final ValueChanged<CatalogueEpisode> onWatch;
   final VoidCallback onOpenPremium;
   final AnalyticsRepository analyticsRepository;
+  final ContentShareService contentShareService;
+
+  Future<void> _share(BuildContext context) async {
+    final box = context.findRenderObject() as RenderBox?;
+    await contentShareService.share(
+      title: 'Watch ${series.title} on ComboReel',
+      deepLink: Uri(
+        scheme: 'comboreel',
+        host: 'series',
+        pathSegments: [series.id],
+      ),
+      origin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -52,7 +68,7 @@ class SeriesDetailScreen extends StatelessWidget {
               seriesId: series.id,
             ),
             IconButton(
-              onPressed: () {},
+              onPressed: () => _share(context),
               icon: const Icon(Icons.ios_share_rounded),
               tooltip: 'Share',
             ),

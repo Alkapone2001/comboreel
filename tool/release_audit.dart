@@ -16,6 +16,10 @@ void main() {
     manifest.contains('android:usesCleartextTraffic="false"'),
     'Android release must reject cleartext traffic.',
   );
+  require(
+    manifest.contains('android:scheme="comboreel"'),
+    'Android must register the ComboReel deep-link scheme.',
+  );
 
   final gradle = read('android/app/build.gradle.kts');
   require(
@@ -25,6 +29,10 @@ void main() {
   require(
     read('.gitignore').contains('*.jks'),
     'Android keystores must be ignored by Git.',
+  );
+  require(
+    read('ios/Runner/Info.plist').contains('<string>comboreel</string>'),
+    'iOS must register the ComboReel deep-link scheme.',
   );
 
   final dartSources = Directory('lib')

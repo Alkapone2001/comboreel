@@ -46,6 +46,7 @@ jobs:
           FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           FIREBASE_WEB_VAPID_KEY: ${{ secrets.FIREBASE_WEB_VAPID_KEY }}
+          PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
         run: >-
           flutter build web --release
           --dart-define=SUPABASE_URL="$SUPABASE_URL"
@@ -55,6 +56,7 @@ jobs:
           --dart-define=FIREBASE_MESSAGING_SENDER_ID="$FIREBASE_MESSAGING_SENDER_ID"
           --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID"
           --dart-define=FIREBASE_WEB_VAPID_KEY="$FIREBASE_WEB_VAPID_KEY"
+          --dart-define=PUBLIC_APP_URL="$PUBLIC_APP_URL"
       - name: Audit deployable artifact
         run: dart run tool/release_audit.dart
       - name: Deploy to Cloudflare Pages staging branch

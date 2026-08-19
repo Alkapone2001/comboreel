@@ -36,6 +36,10 @@ flutter run -d chrome `
 
 Never add secret keys, service-role keys, payment secrets, or webhook secrets to Dart source, build arguments used in public logs, or committed files.
 
+Set the public canonical origin with `--dart-define=PUBLIC_APP_URL=https://...`.
+Share sheets use that HTTPS origin and embed a validated `comboreel://` destination;
+native builds register the custom scheme for cold and warm deep links.
+
 Android production builds require Java 17+, the Android SDK, and an ignored
 `android/key.properties` based on `android/key.properties.example`. Release
 configuration never falls back to the debug signing key.

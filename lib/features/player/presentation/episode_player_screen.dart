@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/content_share_service.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../library/data/viewer_library_repository.dart';
 import '../data/playback_repository.dart';
@@ -19,6 +19,7 @@ class EpisodePlayerScreen extends StatefulWidget {
     required this.playbackRepository,
     required this.viewerId,
     this.initialPositionSeconds = 0,
+    this.contentShareService = const NoopContentShareService(),
   });
 
   final CatalogueEpisode episode;
@@ -26,6 +27,7 @@ class EpisodePlayerScreen extends StatefulWidget {
   final PlaybackRepository playbackRepository;
   final String? viewerId;
   final int initialPositionSeconds;
+  final ContentShareService contentShareService;
 
   @override
   State<EpisodePlayerScreen> createState() => _EpisodePlayerScreenState();
@@ -94,16 +96,18 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   }
 
   Future<void> _share() async {
-    await Clipboard.setData(
-      ClipboardData(
-        text:
-            'comboreel://series/${widget.episode.seriesId}/episode/${widget.episode.id}',
+    final box = context.findRenderObject() as RenderBox?;
+    await widget.contentShareService.share(
+      title: widget.episode.seriesTitle == null
+          ? 'Watch Episode ${widget.episode.episodeNumber} on ComboReel'
+          : 'Watch ${widget.episode.seriesTitle} on ComboReel',
+      deepLink: Uri(
+        scheme: 'comboreel',
+        host: 'series',
+        pathSegments: [widget.episode.seriesId, 'episode', widget.episode.id],
       ),
+      origin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Episode link copied.')));
-    }
   }
 
   Future<void> _loadSession() async {
