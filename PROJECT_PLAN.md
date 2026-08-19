@@ -76,7 +76,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Begin privacy/legal, consent history, data export, and account-deletion release-readiness work. Provider staging resources still need provisioning for end-to-end video, advertising, messaging, store, and payment verification.
+Complete the public legal identity/URLs and staging verification for the implemented privacy center, consent history, data export, and account-deletion flow. Provider staging resources still need provisioning for end-to-end video, advertising, messaging, store, and payment verification.
 
 ## Implementation status notes
 
@@ -100,3 +100,4 @@ Begin privacy/legal, consent history, data export, and account-deletion release-
 - Push notifications are explicitly opt-in. Firebase device tokens are server-owned, refreshed per device, and disabled on consent withdrawal or invalidation. Creator Studio supports draft/review/confirm campaign delivery with result counts and notification deep links.
 - Catalogue models now preserve synopsis, genres, release year, age rating, episode totals, season identity, series titles, and episode synopsis. Viewer and Creator Studio flows support named seasons without hardcoded detail/player metadata.
 - The accessibility audit covers semantics, keyboard activation, contrast, touch targets, and a 200% text critical journey. Final VoiceOver/TalkBack confirmation remains part of signed-device release QA.
+- Privacy release foundations include versioned in-app legal documents, signup acceptance records, auditable preference changes, portable account export, and recent-login deletion with active-subscription warnings. The release checkbox remains open until operator identity, counsel review, public HTTPS documents/deletion route, and staging lifecycle tests are complete.

@@ -181,6 +181,7 @@ class _AppShellState extends State<AppShell> {
         onOpenAdmin: _openAdmin,
         analyticsRepository: widget.services.analyticsRepository,
         pushNotificationService: widget.services.pushNotificationService,
+        privacyRepository: widget.services.privacyRepository,
       ),
     ];
 

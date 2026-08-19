@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../domain/auth_user.dart';
 import 'auth_repository.dart';
+import '../../privacy/presentation/legal_document_screen.dart';
 
 class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository(this._client);
@@ -33,7 +34,11 @@ class SupabaseAuthRepository implements AuthRepository {
     await _client.auth.signUp(
       email: email,
       password: password,
-      data: {'display_name': displayName},
+      data: {
+        'display_name': displayName,
+        'privacy_version': privacyVersion,
+        'terms_version': termsVersion,
+      },
     );
   }
 

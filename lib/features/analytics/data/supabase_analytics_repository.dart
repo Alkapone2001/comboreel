@@ -28,10 +28,14 @@ class SupabaseAnalyticsRepository implements AnalyticsRepository {
   Future<void> setConsent(bool enabled) async {
     final user = _client.auth.currentUser;
     if (user == null) throw StateError('Sign in to change analytics consent.');
-    await _client
-        .from('profiles')
-        .update({'analytics_opt_in': enabled})
-        .eq('id', user.id);
+    await _client.rpc(
+      'set_privacy_preference',
+      params: {
+        'p_kind': 'analytics',
+        'p_granted': enabled,
+        'p_document_version': '2026-08-19',
+      },
+    );
   }
 
   @override

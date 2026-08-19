@@ -7,6 +7,9 @@ import '../../admin/data/admin_repository.dart';
 import '../../admin/domain/admin_models.dart';
 import '../../analytics/data/analytics_repository.dart';
 import '../../notifications/data/push_notification_service.dart';
+import '../../privacy/data/privacy_repository.dart';
+import '../../privacy/presentation/legal_document_screen.dart';
+import '../../privacy/presentation/privacy_center_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -18,6 +21,7 @@ class ProfileScreen extends StatelessWidget {
     required this.onOpenAdmin,
     this.analyticsRepository = const NoopAnalyticsRepository(),
     this.pushNotificationService = const UnavailablePushNotificationService(),
+    this.privacyRepository = const UnavailablePrivacyRepository(),
   });
 
   final AuthRepository authRepository;
@@ -27,6 +31,7 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onOpenAdmin;
   final AnalyticsRepository analyticsRepository;
   final PushNotificationService pushNotificationService;
+  final PrivacyRepository privacyRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +51,7 @@ class ProfileScreen extends StatelessWidget {
               onOpenAdmin: onOpenAdmin,
               analyticsRepository: analyticsRepository,
               pushNotificationService: pushNotificationService,
+              privacyRepository: privacyRepository,
             ),
     );
   }
@@ -137,6 +143,7 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
   bool _createAccount = false;
   bool _submitting = false;
   bool _obscurePassword = true;
+  bool _acceptedLegal = false;
   String? _error;
 
   @override
@@ -155,6 +162,13 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
     });
     try {
       if (_createAccount) {
+        if (!_acceptedLegal) {
+          setState(
+            () => _error =
+                'Accept the Privacy Policy and Terms to create an account.',
+          );
+          return;
+        }
         await widget.repository.signUp(
           email: _email.text.trim(),
           password: _password.text,
@@ -276,6 +290,46 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
                   const SizedBox(height: 14),
                   Text(_error!, style: const TextStyle(color: AppColors.coral)),
                 ],
+                if (_createAccount) ...[
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _acceptedLegal,
+                    onChanged: _submitting
+                        ? null
+                        : (value) =>
+                              setState(() => _acceptedLegal = value ?? false),
+                    title: const Text(
+                      'I accept the Privacy Policy and Terms of Use',
+                    ),
+                    subtitle: Wrap(
+                      spacing: 4,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const LegalDocumentScreen(
+                                document: LegalDocument.privacy,
+                              ),
+                            ),
+                          ),
+                          child: const Text('Privacy Policy'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const LegalDocumentScreen(
+                                document: LegalDocument.terms,
+                              ),
+                            ),
+                          ),
+                          child: const Text('Terms of Use'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 22),
                 FilledButton(
                   onPressed: _submitting ? null : _submit,
@@ -317,6 +371,7 @@ class _SignedInProfile extends StatelessWidget {
     required this.onOpenAdmin,
     required this.analyticsRepository,
     required this.pushNotificationService,
+    required this.privacyRepository,
   });
   final AuthUser user;
   final AuthRepository repository;
@@ -325,6 +380,7 @@ class _SignedInProfile extends StatelessWidget {
   final VoidCallback onOpenAdmin;
   final AnalyticsRepository analyticsRepository;
   final PushNotificationService pushNotificationService;
+  final PrivacyRepository privacyRepository;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -359,9 +415,16 @@ class _SignedInProfile extends StatelessWidget {
         _AnalyticsConsentTile(repository: analyticsRepository),
         if (pushNotificationService.available)
           _PushConsentTile(service: pushNotificationService),
-        const _ProfileTile(
+        _ProfileTile(
           icon: Icons.settings_outlined,
-          title: 'Account settings',
+          title: 'Privacy & account',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  PrivacyCenterScreen(repository: privacyRepository),
+            ),
+          ),
         ),
         FutureBuilder<AdminRole>(
           future: adminRepository.currentRole(),

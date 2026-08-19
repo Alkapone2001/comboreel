@@ -41,6 +41,7 @@ Deno.serve(async (request) => {
   if (body.action === "disable_all") {
     await service.from("profiles").update({ push_opt_in: false }).eq("id", userData.user.id);
     await service.from("push_devices").update({ enabled: false }).eq("user_id", userData.user.id);
+    await service.from("privacy_consents").insert({ user_id: userData.user.id, kind: "push", granted: false, document_version: "2026-08-19", source: "profile" });
     return json(200, { enabled: false });
   }
   if (body.action !== "register" || !body.token || body.token.length < 20 || body.token.length > 4096) {
@@ -60,5 +61,6 @@ Deno.serve(async (request) => {
   }, { onConflict: "token" });
   if (error) return json(500, { error: "registration_failed" });
   await service.from("profiles").update({ push_opt_in: true }).eq("id", userData.user.id);
+  await service.from("privacy_consents").insert({ user_id: userData.user.id, kind: "push", granted: true, document_version: "2026-08-19", source: "profile" });
   return json(200, { enabled: true });
 });

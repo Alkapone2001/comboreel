@@ -31,6 +31,8 @@ import '../../features/monetization/data/stripe_checkout_purchase_service.dart';
 import '../../features/player/data/offline_playback_repository.dart';
 import '../../features/player/data/playback_repository.dart';
 import '../../features/player/data/supabase_playback_repository.dart';
+import '../../features/privacy/data/privacy_repository.dart';
+import '../../features/privacy/data/supabase_privacy_repository.dart';
 import '../config/app_config.dart';
 
 class AppServices {
@@ -47,6 +49,7 @@ class AppServices {
     this.rewardedAdService = const UnavailableRewardedAdService(),
     this.storePurchaseService = const UnavailableStorePurchaseService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
+    this.privacyRepository = const UnavailablePrivacyRepository(),
   });
 
   factory AppServices.offline() => AppServices(
@@ -75,6 +78,7 @@ class AppServices {
   final RewardedAdService rewardedAdService;
   final StorePurchaseService storePurchaseService;
   final PlaybackRepository playbackRepository;
+  final PrivacyRepository privacyRepository;
 
   bool get backendConfigured => config.hasSupabase;
 
@@ -149,6 +153,7 @@ class AppServices {
           ? NativeStorePurchaseService()
           : const UnavailableStorePurchaseService(),
       playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),
+      privacyRepository: SupabasePrivacyRepository(Supabase.instance.client),
     );
   }
 }

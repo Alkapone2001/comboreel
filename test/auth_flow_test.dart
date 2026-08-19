@@ -36,6 +36,7 @@ void main() {
     expect(find.text('Join ComboReel'), findsOneWidget);
     expect(find.text('Display name'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Create account'));
     await tester.tap(find.text('Create account'));
     await tester.pump();
 

@@ -99,3 +99,12 @@ FCM HTTP v1. Deploy with JWT verification enabled and set
 `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_EMAIL`, and
 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`. Use a dedicated service account granted
 only the Firebase Cloud Messaging send permission.
+
+## account-data
+
+Authenticates the viewer and provides a portable JSON export, active-subscription
+deletion preview, and irreversible account deletion. Deletion requires a JWT
+issued within ten minutes, disables push devices, deletes a linked Stripe customer
+when configured, and removes the Supabase Auth user so cascading application data
+is erased. Deploy with JWT verification enabled and set `STRIPE_SECRET_KEY` when
+web billing is enabled.
