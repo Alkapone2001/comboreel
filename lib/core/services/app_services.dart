@@ -4,8 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/account_security_repository.dart';
+import '../../features/auth/data/account_profile_repository.dart';
 import '../../features/auth/data/offline_auth_repository.dart';
 import '../../features/auth/data/supabase_account_security_repository.dart';
+import '../../features/auth/data/supabase_account_profile_repository.dart';
 import '../../features/auth/data/supabase_auth_repository.dart';
 import '../../features/admin/data/admin_repository.dart';
 import '../../features/admin/data/supabase_admin_repository.dart';
@@ -62,6 +64,7 @@ class AppServices {
         const UnavailableViewerPreferencesRepository(),
     this.accountSecurityRepository =
         const UnavailableAccountSecurityRepository(),
+    this.accountProfileRepository = const UnavailableAccountProfileRepository(),
   });
 
   factory AppServices.offline() => AppServices(
@@ -96,6 +99,7 @@ class AppServices {
   final ContentShareService contentShareService;
   final ViewerPreferencesRepository viewerPreferencesRepository;
   final AccountSecurityRepository accountSecurityRepository;
+  final AccountProfileRepository accountProfileRepository;
 
   bool get backendConfigured => config.hasSupabase;
 
@@ -181,6 +185,9 @@ class AppServices {
         Supabase.instance.client,
       ),
       accountSecurityRepository: SupabaseAccountSecurityRepository(
+        Supabase.instance.client,
+      ),
+      accountProfileRepository: SupabaseAccountProfileRepository(
         Supabase.instance.client,
       ),
     );

@@ -70,7 +70,8 @@ After deployment, record the commit SHA and verify:
   `comboreel://series/{id}`, and episode links open the installed iOS/Android app.
 - Create and confirm an account; verify legal-consent rows, sign-in, sign-out,
   non-enumerating password-reset email delivery/deep links, new-password update,
-  and password reauthentication.
+  email verification/resend, confirmation-gated email change, display-name
+  update, and password reauthentication.
 - Load catalogue artwork, a signed HLS stream, subtitles, progress, favourites,
   search, seasons, and the next-episode transition.
 - Verify a coin purchase/unlock replay, rewarded-ad SSV, premium purchase/restore,

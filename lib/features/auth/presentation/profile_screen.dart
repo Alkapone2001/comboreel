@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../data/account_security_repository.dart';
+import '../data/account_profile_repository.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_user.dart';
 import '../../admin/data/admin_repository.dart';
@@ -14,6 +15,7 @@ import '../../privacy/presentation/privacy_center_screen.dart';
 import '../../preferences/data/viewer_preferences_repository.dart';
 import '../../preferences/presentation/playback_preferences_screen.dart';
 import 'update_password_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -31,6 +33,7 @@ class ProfileScreen extends StatelessWidget {
     this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
     this.accountSecurityRepository =
         const UnavailableAccountSecurityRepository(),
+    this.accountProfileRepository = const UnavailableAccountProfileRepository(),
   });
 
   final AuthRepository authRepository;
@@ -45,6 +48,7 @@ class ProfileScreen extends StatelessWidget {
   final PrivacyRepository privacyRepository;
   final ViewerPreferencesRepository preferencesRepository;
   final AccountSecurityRepository accountSecurityRepository;
+  final AccountProfileRepository accountProfileRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +62,7 @@ class ProfileScreen extends StatelessWidget {
           ? _AuthenticationView(
               repository: authRepository,
               securityRepository: accountSecurityRepository,
+              profileRepository: accountProfileRepository,
             )
           : _SignedInProfile(
               user: snapshot.data!,
@@ -72,6 +77,7 @@ class ProfileScreen extends StatelessWidget {
               onOpenWatchHistory: onOpenWatchHistory,
               onOpenPremium: onOpenPremium,
               accountSecurityRepository: accountSecurityRepository,
+              accountProfileRepository: accountProfileRepository,
             ),
     );
   }
@@ -151,9 +157,11 @@ class _AuthenticationView extends StatefulWidget {
   const _AuthenticationView({
     required this.repository,
     required this.securityRepository,
+    required this.profileRepository,
   });
   final AuthRepository repository;
   final AccountSecurityRepository securityRepository;
+  final AccountProfileRepository profileRepository;
 
   @override
   State<_AuthenticationView> createState() => _AuthenticationViewState();
@@ -209,6 +217,28 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
           const SnackBar(
             content: Text(
               'If an account exists for that email, a reset link is on its way.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = _friendlyError(error));
+    }
+  }
+
+  Future<void> _resendVerification() async {
+    final email = _email.text.trim();
+    if (!email.contains('@')) {
+      setState(() => _error = 'Enter your account email first.');
+      return;
+    }
+    try {
+      await widget.profileRepository.resendEmailConfirmation(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'If confirmation is pending, a new email is on its way.',
             ),
           ),
         );
@@ -420,6 +450,11 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
                     onPressed: _submitting ? null : _requestPasswordReset,
                     child: const Text('Forgot password?'),
                   ),
+                if (!_createAccount)
+                  TextButton(
+                    onPressed: _submitting ? null : _resendVerification,
+                    child: const Text('Resend verification email'),
+                  ),
                 TextButton(
                   onPressed: _submitting
                       ? null
@@ -453,6 +488,7 @@ class _SignedInProfile extends StatelessWidget {
     required this.onOpenWatchHistory,
     required this.onOpenPremium,
     required this.accountSecurityRepository,
+    required this.accountProfileRepository,
   });
   final AuthUser user;
   final AuthRepository repository;
@@ -466,6 +502,7 @@ class _SignedInProfile extends StatelessWidget {
   final VoidCallback onOpenWatchHistory;
   final VoidCallback onOpenPremium;
   final AccountSecurityRepository accountSecurityRepository;
+  final AccountProfileRepository accountProfileRepository;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -483,6 +520,17 @@ class _SignedInProfile extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 28),
+        _ProfileTile(
+          icon: Icons.badge_outlined,
+          title: 'Profile details',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  EditProfileScreen(repository: accountProfileRepository),
+            ),
+          ),
+        ),
         _ProfileTile(
           icon: Icons.history_rounded,
           title: 'Watch history',

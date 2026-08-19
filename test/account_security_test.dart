@@ -4,7 +4,9 @@ import 'package:comboreel/app/comboreel_app.dart';
 import 'package:comboreel/core/config/app_config.dart';
 import 'package:comboreel/core/services/app_services.dart';
 import 'package:comboreel/features/auth/data/account_security_repository.dart';
+import 'package:comboreel/features/auth/data/account_profile_repository.dart';
 import 'package:comboreel/features/auth/data/offline_auth_repository.dart';
+import 'package:comboreel/features/auth/domain/account_profile.dart';
 import 'package:comboreel/features/auth/presentation/update_password_screen.dart';
 import 'package:comboreel/features/catalogue/data/offline_catalogue_repository.dart';
 import 'package:comboreel/features/library/data/offline_viewer_library_repository.dart';
@@ -49,6 +51,27 @@ void main() {
     expect(find.text('Save new password'), findsOneWidget);
   });
 
+  testWidgets('signed-out viewer can resend email verification', (
+    tester,
+  ) async {
+    final security = _FakeAccountSecurityRepository();
+    final profile = _FakeAccountProfileRepository();
+    await tester.pumpWidget(
+      ComboReelApp(services: _services(security, profile: profile)),
+    );
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'pending@example.com',
+    );
+    await tester.tap(find.text('Resend verification email'));
+    await tester.pump();
+
+    expect(profile.resentEmail, 'pending@example.com');
+  });
+
   testWidgets('new password requires length and matching confirmation', (
     tester,
   ) async {
@@ -85,7 +108,11 @@ void main() {
   });
 }
 
-AppServices _services(AccountSecurityRepository security) => AppServices(
+AppServices _services(
+  AccountSecurityRepository security, {
+  AccountProfileRepository profile =
+      const UnavailableAccountProfileRepository(),
+}) => AppServices(
   config: const AppConfig(
     supabaseUrl: 'https://example.supabase.co',
     supabasePublishableKey: 'test-publishable-key',
@@ -95,6 +122,7 @@ AppServices _services(AccountSecurityRepository security) => AppServices(
   viewerLibraryRepository: OfflineViewerLibraryRepository(),
   monetizationRepository: OfflineMonetizationRepository(),
   accountSecurityRepository: security,
+  accountProfileRepository: profile,
 );
 
 class _FakeAccountSecurityRepository implements AccountSecurityRepository {
@@ -117,4 +145,27 @@ class _FakeAccountSecurityRepository implements AccountSecurityRepository {
   Future<void> updatePassword(String newPassword) async {
     updatedPassword = newPassword;
   }
+}
+
+class _FakeAccountProfileRepository implements AccountProfileRepository {
+  String? resentEmail;
+
+  @override
+  Future<AccountProfile> currentProfile() async => const AccountProfile(
+    displayName: 'Viewer',
+    email: 'viewer@example.com',
+    emailConfirmed: false,
+  );
+
+  @override
+  Future<void> requestEmailChange(String email) async {}
+
+  @override
+  Future<void> resendEmailConfirmation(String email) async {
+    resentEmail = email;
+  }
+
+  @override
+  Future<AccountProfile> updateDisplayName(String displayName) =>
+      currentProfile();
 }

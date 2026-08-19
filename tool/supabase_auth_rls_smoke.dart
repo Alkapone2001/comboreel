@@ -70,6 +70,24 @@ Future<void> main() async {
     Uri.parse('$apiUrl/rest/v1/profiles?id=eq.${first.id}'),
     apiKey: anonKey,
     bearer: first.token,
+    body: {'display_name': 'Updated Viewer'},
+    expectedStatus: 204,
+    description: 'viewer can update own display name',
+  );
+  await _request(
+    'PUT',
+    Uri.parse('$apiUrl/auth/v1/user?redirect_to=http://127.0.0.1:7357'),
+    apiKey: anonKey,
+    bearer: first.token,
+    body: {'email': 'updated-$runId@comboreel.local'},
+    expectedStatus: 200,
+    description: 'email change requires confirmation through Auth',
+  );
+  await _request(
+    'PATCH',
+    Uri.parse('$apiUrl/rest/v1/profiles?id=eq.${first.id}'),
+    apiKey: anonKey,
+    bearer: first.token,
     body: {'role': 'admin'},
     expectedStatus: 403,
     description: 'viewer cannot elevate own role',
@@ -179,7 +197,7 @@ Future<void> main() async {
     description: 'signup records privacy and terms consent',
   );
 
-  stdout.writeln('Local Supabase Auth/RLS smoke test passed (15 checks).');
+  stdout.writeln('Local Supabase Auth/RLS smoke test passed (17 checks).');
 }
 
 Future<_Session> _signUp(
