@@ -108,3 +108,12 @@ flutter build web
 - `docs/ACCESSIBILITY_AUDIT.md`: accessibility findings and release-device checklist
 
 See `supabase/README.md` for database deployment and security guidance.
+
+## Continuous delivery
+
+Every pull request and `main` push runs formatting, analysis, all Flutter tests,
+the release/store audits, an optimized web build, all migrations on clean
+PostgreSQL 16, and SQL contract tests. The resulting web artifact is retained for
+14 days. Staging deployment is an explicitly dispatched, protected-environment
+workflow for Cloudflare Pages. See `docs/DEPLOYMENT.md` for variables, least-
+privilege secrets, backend ordering, smoke tests, and rollback.

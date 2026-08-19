@@ -1,0 +1,90 @@
+name: Quality gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter, security, and web artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.0
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test tool
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test --reporter expanded
+      - name: Build optimized web release
+        run: flutter build web --release
+      - name: Audit release and store artifacts
+        run: |
+          dart run tool/release_audit.dart
+          dart run tool/store_audit.dart
+      - name: Upload immutable web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: comboreel-web-${{ github.sha }}
+          path: build/web
+          if-no-files-found: error
+          retention-days: 14
+
+  database:
+    name: PostgreSQL migrations and contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap Supabase-compatible roles
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
+      - name: Apply migrations in order
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in $(find supabase/migrations -maxdepth 1 -name '*.sql' | sort); do
+            echo "Applying $migration"
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Run SQL contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for contract in $(find supabase/tests -maxdepth 1 -name '*_contract.sql' | sort); do
+            echo "Testing $contract"
+            psql -v ON_ERROR_STOP=1 -f "$contract"
+          done
