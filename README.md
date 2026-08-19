@@ -10,6 +10,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - A Supabase project when testing live backend features
 - A Cloudflare Stream account and deployed playback Edge Function for live video
 - An AdMob account and deployed rewarded SSV callback for production ad unlocks
+- App Store Connect and Google Play products plus server API credentials for mobile purchases
 
 ## Run the UI prototype
 
@@ -35,6 +36,13 @@ For mobile rewarded ads, provide `ADMOB_ANDROID_REWARDED_AD_UNIT_ID` and
 `ADMOB_IOS_REWARDED_AD_UNIT_ID` as Dart defines. The committed manifests contain
 Google's development app IDs; replace them with ComboReel's AdMob app IDs before
 release, and use only Google's test ad units during development.
+
+Mobile store product IDs are defined in the database migration and native client:
+`comboreel.coins.50`, `comboreel.coins.120`, `comboreel.coins.300`,
+`comboreel.premium.monthly`, and `comboreel.premium.annual`. Create matching
+products in App Store Connect and Play Console before device testing. Store
+callbacks are not trusted; `verify-mobile-purchase` must accept a transaction
+before Flutter completes it.
 
 ## Verify
 

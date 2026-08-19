@@ -1,5 +1,6 @@
 import '../domain/wallet_snapshot.dart';
 import '../domain/rewarded_ad_claim.dart';
+import '../domain/store_purchase.dart';
 import 'monetization_repository.dart';
 
 class OfflineMonetizationRepository implements MonetizationRepository {
@@ -7,6 +8,7 @@ class OfflineMonetizationRepository implements MonetizationRepository {
   final Set<String> _unlockedEpisodes = {};
   final Map<String, UnlockResult> _requests = {};
   final Map<String, String> _rewardClaims = {};
+  final Set<String> _verifiedPurchases = {};
   final List<CoinActivity> _activity = [
     CoinActivity(
       amount: 25,
@@ -87,5 +89,36 @@ class OfflineMonetizationRepository implements MonetizationRepository {
     if (episodeId == null) return RewardedAdClaimStatus.expired;
     _unlockedEpisodes.add(episodeId);
     return RewardedAdClaimStatus.verified;
+  }
+
+  @override
+  Future<PurchaseVerificationResult> verifyMobilePurchase(
+    StorePurchaseUpdate purchase,
+  ) async {
+    if (!_verifiedPurchases.add(purchase.id)) {
+      return PurchaseVerificationResult(accepted: true, balance: _balance);
+    }
+    if (purchase.productId.contains('.coins.')) {
+      final amount = int.parse(purchase.productId.split('.').last);
+      _balance += amount;
+      _activity.insert(
+        0,
+        CoinActivity(
+          amount: amount,
+          reason: 'Coin purchase',
+          balanceAfter: _balance,
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+      return PurchaseVerificationResult(accepted: true, balance: _balance);
+    }
+    final duration = purchase.productId.endsWith('.annual')
+        ? const Duration(days: 365)
+        : const Duration(days: 30);
+    return PurchaseVerificationResult(
+      accepted: true,
+      balance: _balance,
+      premiumUntil: DateTime.now().toUtc().add(duration),
+    );
   }
 }

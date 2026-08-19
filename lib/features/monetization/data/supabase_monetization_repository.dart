@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/wallet_snapshot.dart';
 import '../domain/rewarded_ad_claim.dart';
+import '../domain/store_purchase.dart';
 import 'monetization_repository.dart';
 
 class SupabaseMonetizationRepository implements MonetizationRepository {
@@ -96,5 +97,33 @@ class SupabaseMonetizationRepository implements MonetizationRepository {
     if (rows.isEmpty) return RewardedAdClaimStatus.expired;
     final value = (rows.single as Map<String, dynamic>)['status'] as String;
     return RewardedAdClaimStatus.values.byName(value);
+  }
+
+  @override
+  Future<PurchaseVerificationResult> verifyMobilePurchase(
+    StorePurchaseUpdate purchase,
+  ) async {
+    final result = await _client.functions.invoke(
+      'verify-mobile-purchase',
+      body: {
+        'source': purchase.source,
+        'product_id': purchase.productId,
+        'verification_data': purchase.verificationData,
+        'purchase_id': purchase.purchaseId,
+      },
+    );
+    final data = result.data as Map<String, dynamic>;
+    if (result.status != 200 || data['ok'] != true) {
+      throw StateError(
+        data['error'] as String? ?? 'Purchase verification failed',
+      );
+    }
+    return PurchaseVerificationResult(
+      accepted: data['accepted'] as bool? ?? false,
+      balance: data['balance'] as int?,
+      premiumUntil: data['premium_until'] == null
+          ? null
+          : DateTime.parse(data['premium_until'] as String),
+    );
   }
 }

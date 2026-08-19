@@ -38,6 +38,8 @@ dependencies:
   video_player: ^2.14.0
   http: ^1.6.0
   google_mobile_ads: ^9.1.0
+  in_app_purchase: ^3.3.0
+  in_app_purchase_android: ^0.5.2
 
 dev_dependencies:
   flutter_test:

@@ -3,8 +3,10 @@ import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/home/data/demo_series.dart';
 import 'package:comboreel/features/library/data/offline_viewer_library_repository.dart';
 import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
+import 'package:comboreel/features/monetization/data/demo_store_purchase_service.dart';
 import 'package:comboreel/features/monetization/data/rewarded_ad_service.dart';
 import 'package:comboreel/features/monetization/domain/rewarded_ad_claim.dart';
+import 'package:comboreel/features/monetization/domain/store_purchase.dart';
 import 'package:comboreel/features/monetization/presentation/coins_screen.dart';
 import 'package:comboreel/features/series/presentation/series_detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -41,14 +43,30 @@ void main() {
     expect(await repository.hasEpisodeAccess('series-episode-6'), isTrue);
   });
 
-  testWidgets('Coins screen renders balance and server-owned purchase state', (
-    tester,
-  ) async {
+  test('premium purchase verification returns a durable expiry', () async {
+    final repository = OfflineMonetizationRepository();
+    final result = await repository.verifyMobilePurchase(
+      const StorePurchaseUpdate(
+        id: 'premium-test-1',
+        productId: 'comboreel.premium.monthly',
+        status: StorePurchaseStatus.purchased,
+        source: 'demo_store',
+        verificationData: 'demo-token',
+      ),
+    );
+
+    expect(result.accepted, isTrue);
+    expect(result.premiumUntil, isNotNull);
+    expect(result.premiumUntil!.isAfter(DateTime.now().toUtc()), isTrue);
+  });
+
+  testWidgets('Coins screen renders localized store products', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: CoinsScreen(
             repository: OfflineMonetizationRepository(),
+            store: DemoStorePurchaseService(),
             viewerId: 'viewer',
           ),
         ),
@@ -58,7 +76,33 @@ void main() {
 
     expect(find.text('25'), findsOneWidget);
     expect(find.text('available coins'), findsOneWidget);
-    expect(find.text('Store setup pending'), findsNWidgets(3));
+    expect(find.text(r'$1.99'), findsOneWidget);
+    expect(find.text('Premium monthly'), findsOneWidget);
+    expect(find.text('Restore Purchases'), findsOneWidget);
+  });
+
+  testWidgets('verified coin purchase refreshes the wallet once', (
+    tester,
+  ) async {
+    final repository = OfflineMonetizationRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CoinsScreen(
+            repository: repository,
+            store: DemoStorePurchaseService(),
+            viewerId: 'viewer',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(r'$1.99'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('75'), findsOneWidget);
+    expect(find.text('Coins added to your wallet.'), findsOneWidget);
+    expect((await repository.wallet('viewer')).transactions.length, 2);
   });
 
   testWidgets('locked episode unlock spends coins and grants playback', (
@@ -76,6 +120,7 @@ void main() {
           rewardedAdService: const DemoRewardedAdService(),
           viewerId: 'viewer',
           onWatch: (episode) => openedEpisode = episode,
+          onOpenPremium: () {},
         ),
       ),
     );
@@ -110,6 +155,7 @@ void main() {
           rewardedAdService: const DemoRewardedAdService(),
           viewerId: 'viewer',
           onWatch: (episode) => openedEpisode = episode,
+          onOpenPremium: () {},
         ),
       ),
     );

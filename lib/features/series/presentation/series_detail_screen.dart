@@ -19,6 +19,7 @@ class SeriesDetailScreen extends StatelessWidget {
     required this.rewardedAdService,
     required this.viewerId,
     required this.onWatch,
+    required this.onOpenPremium,
   });
 
   final DramaSeries series;
@@ -28,6 +29,7 @@ class SeriesDetailScreen extends StatelessWidget {
   final RewardedAdService rewardedAdService;
   final String? viewerId;
   final ValueChanged<CatalogueEpisode> onWatch;
+  final VoidCallback onOpenPremium;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -229,7 +231,7 @@ class SeriesDetailScreen extends StatelessWidget {
                 _UnlockChoice(
                   icon: Icons.monetization_on_rounded,
                   title: 'Use ${episode.coinPrice} coins',
-                  subtitle: 'Balance: 25 coins',
+                  subtitle: 'Secure one-time unlock',
                   color: AppColors.gold,
                   onTap: () => _unlockWithCoins(context, episode),
                 ),
@@ -237,7 +239,10 @@ class SeriesDetailScreen extends StatelessWidget {
                   icon: Icons.workspace_premium_rounded,
                   title: 'Go Premium',
                   subtitle: 'Unlimited episodes, no ads',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onOpenPremium();
+                  },
                 ),
               ],
             ),

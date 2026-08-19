@@ -33,6 +33,12 @@ The `credit_coins_server` and `grant_rewarded_episode_server` functions are inte
 
 Deploy `functions/rewarded-ad-callback` without gateway JWT verification, set its documented ad-unit allowlist, and configure its public URL as the AdMob SSV callback. The function independently verifies Google's signature before using any service-role mutation.
 
+`202608190004_mobile_purchases.sql` defines the allowlisted mobile product
+catalogue, immutable provider events, and replay-safe coin/subscription
+fulfillment. Deploy `functions/verify-mobile-purchase` with JWT verification and
+the documented least-privilege Apple/Google credentials. Never grant purchases
+from Flutter's purchase callback alone.
+
 ## Private video playback
 
 Deploy `functions/playback-session` after setting its documented secrets. Mark every licensed Stream video `requireSignedURLs: true`. The function authorizes the episode before requesting a temporary token; clients never receive the Cloudflare API token or service-role key.

@@ -25,3 +25,24 @@ claim. Deploy with JWT verification disabled because Google calls it directly.
 Set `ADMOB_REWARDED_AD_UNIT_IDS` to a comma-separated allowlist of production
 Android and iOS rewarded ad unit IDs. Configure its public URL in AdMob with
 reward amount `1` and reward item `episode_unlock`.
+
+## verify-mobile-purchase
+
+Authenticates the ComboReel viewer, looks up the server-owned product mapping,
+and verifies the transaction directly with Google Play Developer API or Apple
+App Store Server API before calling the service-role-only fulfillment RPC.
+Deploy with JWT verification enabled.
+
+Required secrets:
+
+- `GOOGLE_PLAY_PACKAGE_NAME`
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+- `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+- `APPLE_ISSUER_ID`
+- `APPLE_KEY_ID`
+- `APPLE_PRIVATE_KEY`
+- `APPLE_BUNDLE_ID`
+
+Grant the Google service account only the Play Console financial/order access
+needed for purchase verification. Use a dedicated App Store Connect In-App
+Purchase key. Store PEM newlines either literally or as escaped `\\n` values.

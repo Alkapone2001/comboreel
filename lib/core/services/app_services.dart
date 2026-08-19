@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/data/auth_repository.dart';
@@ -11,9 +12,12 @@ import '../../features/library/data/supabase_viewer_library_repository.dart';
 import '../../features/library/data/viewer_library_repository.dart';
 import '../../features/monetization/data/monetization_repository.dart';
 import '../../features/monetization/data/admob_rewarded_ad_service.dart';
+import '../../features/monetization/data/demo_store_purchase_service.dart';
+import '../../features/monetization/data/native_store_purchase_service.dart';
 import '../../features/monetization/data/offline_monetization_repository.dart';
 import '../../features/monetization/data/rewarded_ad_service.dart';
 import '../../features/monetization/data/supabase_monetization_repository.dart';
+import '../../features/monetization/data/store_purchase_service.dart';
 import '../../features/player/data/offline_playback_repository.dart';
 import '../../features/player/data/playback_repository.dart';
 import '../../features/player/data/supabase_playback_repository.dart';
@@ -27,6 +31,7 @@ class AppServices {
     required this.viewerLibraryRepository,
     required this.monetizationRepository,
     this.rewardedAdService = const UnavailableRewardedAdService(),
+    this.storePurchaseService = const UnavailableStorePurchaseService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
   });
 
@@ -37,6 +42,7 @@ class AppServices {
     viewerLibraryRepository: OfflineViewerLibraryRepository(),
     monetizationRepository: OfflineMonetizationRepository(),
     rewardedAdService: const DemoRewardedAdService(),
+    storePurchaseService: DemoStorePurchaseService(),
   );
 
   final AppConfig config;
@@ -45,6 +51,7 @@ class AppServices {
   final ViewerLibraryRepository viewerLibraryRepository;
   final MonetizationRepository monetizationRepository;
   final RewardedAdService rewardedAdService;
+  final StorePurchaseService storePurchaseService;
   final PlaybackRepository playbackRepository;
 
   bool get backendConfigured => config.hasSupabase;
@@ -59,6 +66,7 @@ class AppServices {
         viewerLibraryRepository: OfflineViewerLibraryRepository(),
         monetizationRepository: OfflineMonetizationRepository(),
         rewardedAdService: const DemoRewardedAdService(),
+        storePurchaseService: DemoStorePurchaseService(),
       );
     }
 
@@ -82,6 +90,12 @@ class AppServices {
         androidAdUnitId: config.admobAndroidRewardedAdUnitId,
         iosAdUnitId: config.admobIosRewardedAdUnitId,
       ),
+      storePurchaseService:
+          !kIsWeb &&
+              (defaultTargetPlatform == TargetPlatform.android ||
+                  defaultTargetPlatform == TargetPlatform.iOS)
+          ? NativeStorePurchaseService()
+          : const UnavailableStorePurchaseService(),
       playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),
     );
   }

@@ -38,6 +38,10 @@ class _AppShellState extends State<AppShell> {
           rewardedAdService: widget.services.rewardedAdService,
           viewerId: _viewerId,
           onWatch: _openPlayer,
+          onOpenPremium: () {
+            Navigator.of(context).pop();
+            setState(() => _selectedIndex = 2);
+          },
         ),
       ),
     );
@@ -99,6 +103,7 @@ class _AppShellState extends State<AppShell> {
       ),
       CoinsScreen(
         repository: widget.services.monetizationRepository,
+        store: widget.services.storePurchaseService,
         viewerId: _viewerId,
       ),
       ProfileScreen(

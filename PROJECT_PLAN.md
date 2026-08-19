@@ -52,9 +52,9 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Define entitlements and a server-verified coin ledger
 - [x] Add atomic, idempotent coin-based episode unlocks
 - [x] Connect rewarded-ad verification and unlocks
-- [ ] Add mobile in-app purchases and subscriptions
+- [x] Add mobile in-app purchases and subscriptions
 - [ ] Add Stripe Checkout and webhooks for web purchases
-- [ ] Add restore-purchases and entitlement reconciliation
+- [ ] Add provider notifications and full refund/renewal reconciliation
 
 ### 4. Admin and operations
 
@@ -84,11 +84,13 @@ Provision staging Supabase, Cloudflare, and AdMob resources; deploy both Edge Fu
 - Series artwork is currently an original abstract gradient treatment, not final licensed artwork.
 - The episode player streams signed HLS sessions when providers are configured and uses a deterministic visual fallback offline.
 - Episode 1–5 free and later episodes locked is represented in the UI; coin and rewarded-ad entitlements are persisted and server verified.
-- Discover, Profile, wallet history, coin unlocks, and rewarded episode unlocks have functional repository-backed flows. Store purchases remain pending.
+- Discover, Profile, wallet history, coin unlocks, rewarded unlocks, localized mobile products, subscription purchases, and restore have repository-backed flows. Live store validation awaits provider provisioning.
 - Supabase initialization is opt-in through compile-time definitions; no credentials or secret keys are stored in the repository.
 - The schema migration has been executed successfully against a clean PostgreSQL 16 container. Live Supabase Auth/RLS integration still requires a staging project.
 - Home and series episode lists now load through repository contracts and include loading, empty, and failure behavior. Offline mode supplies deterministic content; configured builds query published Supabase rows.
 - Favourites, My List, player progress saves, and Continue Watching now share one viewer-library contract with offline and Supabase implementations.
 - Coin spends and entitlement grants are atomic database operations with idempotency. SQL contract coverage proves coin and rewarded-ad replay safety. Live rewards remain disabled until AdMob and the SSV callback are configured.
 - Rewarded ads use short-lived episode claims and wait for a Google-signed SSV callback before granting access. The app uses development identifiers until production AdMob resources and consent handling are configured.
+- Mobile purchases use Apple/Google server APIs and a replay-safe fulfillment RPC; Flutter consumes/completes transactions only after verification. Product creation, agreements, tax/banking setup, and sandbox-device validation remain provider tasks.
+- Restore Purchases re-verifies owned subscriptions; App Store Server Notifications and Google RTDN are still required for immediate refund, revocation, and renewal reconciliation while the app is closed.
 - Playback sessions are authorized server-side and return short-lived, non-cacheable signed Cloudflare HLS URLs. Flutter includes HLS lifecycle, resume persistence, subtitles, and offline/error behavior; provider staging verification is still required.

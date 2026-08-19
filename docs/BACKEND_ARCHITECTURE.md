@@ -52,3 +52,19 @@ ECDSA/SHA-256 signature over the untouched query string, enforces the ad unit,
 reward, timestamp, claim owner, and expiry, then atomically records the globally
 unique transaction and grants one entitlement. Client callbacks cannot grant
 access; they only move the interface into a verification wait state.
+
+## Mobile purchases
+
+The Flutter purchase stream starts with the app shell, loads localized prices
+from StoreKit/Google Play, attaches the authenticated UUID as the store account
+token, and sends only pending completed/restored transactions to the verification
+function. The function checks the server-owned product catalogue and verifies
+the purchase directly through App Store Server API or Google Play Developer API.
+
+The database owns fulfillment. Provider transaction IDs are globally unique per
+platform, consumable coin credits reuse that ID as the ledger reference, and
+subscription transactions upsert one premium entitlement with the provider
+expiry. A transaction tied to a different viewer or product is rejected. Flutter
+finishes or consumes the store transaction only after server acceptance. Restore
+Purchases replays owned non-consumables/subscriptions through the same verifier;
+consumable balances are restored from ComboReel's server ledger, not the store.

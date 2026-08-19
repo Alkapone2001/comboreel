@@ -126,4 +126,59 @@ begin
 end;
 $$;
 
+select * from public.fulfill_mobile_purchase_server(
+  '11111111-1111-1111-1111-111111111111', 'google',
+  'GPA.contract.coin.0001', 'google-token-0001',
+  'comboreel.coins.50', now(), null, 'test', 'PURCHASED'
+);
+select * from public.fulfill_mobile_purchase_server(
+  '11111111-1111-1111-1111-111111111111', 'google',
+  'GPA.contract.coin.0001', 'google-token-0001',
+  'comboreel.coins.50', now(), null, 'test', 'PURCHASED'
+);
+select * from public.fulfill_mobile_purchase_server(
+  '11111111-1111-1111-1111-111111111111', 'apple',
+  'apple-contract-sub-0001', 'apple-original-sub-0001',
+  'comboreel.premium.monthly', now(), now() + interval '30 days',
+  'sandbox', 'ACTIVE'
+);
+select * from public.fulfill_mobile_purchase_server(
+  '11111111-1111-1111-1111-111111111111', 'apple',
+  'apple-contract-sub-0001', 'apple-original-sub-0001',
+  'comboreel.premium.monthly', now(), now() + interval '30 days',
+  'sandbox', 'ACTIVE'
+);
+
+do $$
+declare
+  v_balance integer;
+  v_purchase_ledger_count integer;
+  v_purchase_event_count integer;
+  v_premium_count integer;
+begin
+  select balance into v_balance from public.wallets
+  where user_id = '11111111-1111-1111-1111-111111111111';
+  if v_balance <> 55 then
+    raise exception 'expected post-purchase balance 55, got %', v_balance;
+  end if;
+  select count(*) into v_purchase_ledger_count from public.coin_transactions
+  where user_id = '11111111-1111-1111-1111-111111111111'
+    and reason = 'purchase' and reference_id = 'google:GPA.contract.coin.0001';
+  if v_purchase_ledger_count <> 1 then
+    raise exception 'expected one purchase ledger entry, got %', v_purchase_ledger_count;
+  end if;
+  select count(*) into v_purchase_event_count from public.mobile_purchase_events
+  where user_id = '11111111-1111-1111-1111-111111111111';
+  if v_purchase_event_count <> 2 then
+    raise exception 'expected two unique mobile purchase events, got %', v_purchase_event_count;
+  end if;
+  select count(*) into v_premium_count from public.entitlements
+  where user_id = '11111111-1111-1111-1111-111111111111'
+    and type = 'premium' and source = 'subscription';
+  if v_premium_count <> 1 then
+    raise exception 'expected one premium entitlement, got %', v_premium_count;
+  end if;
+end;
+$$;
+
 rollback;
