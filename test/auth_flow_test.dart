@@ -4,6 +4,7 @@ import 'package:comboreel/core/services/app_services.dart';
 import 'package:comboreel/features/auth/data/auth_repository.dart';
 import 'package:comboreel/features/auth/domain/auth_user.dart';
 import 'package:comboreel/features/catalogue/data/offline_catalogue_repository.dart';
+import 'package:comboreel/features/library/data/offline_viewer_library_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -18,6 +19,7 @@ void main() {
       ),
       authRepository: repository,
       catalogueRepository: const OfflineCatalogueRepository(),
+      viewerLibraryRepository: OfflineViewerLibraryRepository(),
     );
 
     await tester.pumpWidget(ComboReelApp(services: services));

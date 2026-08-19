@@ -9,6 +9,8 @@ class DramaSeries {
     required this.colors,
     this.progress,
     this.badge,
+    this.episodeId,
+    this.positionSeconds = 0,
   });
 
   final String id;
@@ -18,4 +20,6 @@ class DramaSeries {
   final List<Color> colors;
   final double? progress;
   final String? badge;
+  final String? episodeId;
+  final int positionSeconds;
 }

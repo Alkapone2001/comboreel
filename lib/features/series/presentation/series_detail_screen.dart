@@ -4,18 +4,23 @@ import '../../../core/theme/app_theme.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../home/domain/series.dart';
+import '../../library/data/viewer_library_repository.dart';
 
 class SeriesDetailScreen extends StatelessWidget {
   const SeriesDetailScreen({
     super.key,
     required this.series,
     required this.catalogueRepository,
+    required this.viewerLibraryRepository,
+    required this.viewerId,
     required this.onWatch,
   });
 
   final DramaSeries series;
   final CatalogueRepository catalogueRepository;
-  final VoidCallback onWatch;
+  final ViewerLibraryRepository viewerLibraryRepository;
+  final String? viewerId;
+  final ValueChanged<CatalogueEpisode> onWatch;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -25,10 +30,10 @@ class SeriesDetailScreen extends StatelessWidget {
           expandedHeight: 360,
           pinned: true,
           actions: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.bookmark_border_rounded),
-              tooltip: 'Add to My List',
+            _FavouriteButton(
+              repository: viewerLibraryRepository,
+              viewerId: viewerId,
+              seriesId: series.id,
             ),
             IconButton(
               onPressed: () {},
@@ -94,7 +99,7 @@ class SeriesDetailScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: onWatch,
+                  onPressed: _startFirstEpisode,
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 17),
                   ),
@@ -166,7 +171,7 @@ class SeriesDetailScreen extends StatelessWidget {
                 itemBuilder: (context, index) => _EpisodeTile(
                   episode: episodes[index],
                   colors: series.colors,
-                  onWatch: onWatch,
+                  onWatch: () => onWatch(episodes[index]),
                   onUnlock: () => _showUnlockSheet(context, episodes[index]),
                 ),
               );
@@ -176,6 +181,11 @@ class SeriesDetailScreen extends StatelessWidget {
       ],
     ),
   );
+
+  Future<void> _startFirstEpisode() async {
+    final episodes = await catalogueRepository.episodesForSeries(series.id);
+    if (episodes.isNotEmpty) onWatch(episodes.first);
+  }
 
   void _showUnlockSheet(BuildContext context, CatalogueEpisode episode) {
     showModalBottomSheet<void>(
@@ -275,6 +285,78 @@ class _EpisodeTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FavouriteButton extends StatefulWidget {
+  const _FavouriteButton({
+    required this.repository,
+    required this.viewerId,
+    required this.seriesId,
+  });
+
+  final ViewerLibraryRepository repository;
+  final String? viewerId;
+  final String seriesId;
+
+  @override
+  State<_FavouriteButton> createState() => _FavouriteButtonState();
+}
+
+class _FavouriteButtonState extends State<_FavouriteButton> {
+  bool _favourite = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final viewerId = widget.viewerId;
+    if (viewerId == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    final ids = await widget.repository.favouriteSeriesIds(viewerId);
+    if (mounted) {
+      setState(() {
+        _favourite = ids.contains(widget.seriesId);
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _toggle() async {
+    final viewerId = widget.viewerId;
+    if (viewerId == null || _loading) return;
+    final next = !_favourite;
+    setState(() => _favourite = next);
+    try {
+      if (next) {
+        await widget.repository.addFavourite(
+          userId: viewerId,
+          seriesId: widget.seriesId,
+        );
+      } else {
+        await widget.repository.removeFavourite(
+          userId: viewerId,
+          seriesId: widget.seriesId,
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _favourite = !next);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    onPressed: widget.viewerId == null || _loading ? null : _toggle,
+    icon: Icon(
+      _favourite ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+    ),
+    tooltip: _favourite ? 'Remove from My List' : 'Add to My List',
+  );
 }
 
 class _MetadataPill extends StatelessWidget {

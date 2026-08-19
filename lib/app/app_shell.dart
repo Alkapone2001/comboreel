@@ -4,8 +4,10 @@ import '../core/services/app_services.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/profile_screen.dart';
 import '../features/discover/presentation/discover_screen.dart';
+import '../features/catalogue/domain/catalogue_episode.dart';
 import '../features/home/domain/series.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/library/presentation/my_list_screen.dart';
 import '../features/player/presentation/episode_player_screen.dart';
 import '../features/series/presentation/series_detail_screen.dart';
 
@@ -21,21 +23,60 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
+  String? get _viewerId =>
+      widget.services.authRepository.currentUser?.id ??
+      (widget.services.backendConfigured ? null : 'demo-viewer');
+
   void _openSeries(DramaSeries series) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SeriesDetailScreen(
           series: series,
           catalogueRepository: widget.services.catalogueRepository,
+          viewerLibraryRepository: widget.services.viewerLibraryRepository,
+          viewerId: _viewerId,
           onWatch: _openPlayer,
         ),
       ),
     );
   }
 
-  void _openPlayer() {
+  void _openPlayer(CatalogueEpisode episode, {int positionSeconds = 0}) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const EpisodePlayerScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => EpisodePlayerScreen(
+          episode: episode,
+          initialPositionSeconds: positionSeconds,
+          viewerLibraryRepository: widget.services.viewerLibraryRepository,
+          viewerId: _viewerId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSeriesPlayer(DramaSeries series) async {
+    final episodes = await widget.services.catalogueRepository
+        .episodesForSeries(series.id);
+    if (!mounted || episodes.isEmpty) return;
+    final episode = series.episodeId == null
+        ? episodes.first
+        : episodes.firstWhere(
+            (item) => item.id == series.episodeId,
+            orElse: () => episodes.first,
+          );
+    _openPlayer(episode, positionSeconds: series.positionSeconds);
+  }
+
+  void _openMyList() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MyListScreen(
+          catalogueRepository: widget.services.catalogueRepository,
+          viewerLibraryRepository: widget.services.viewerLibraryRepository,
+          viewerId: _viewerId,
+          onOpenSeries: _openSeries,
+        ),
+      ),
     );
   }
 
@@ -44,8 +85,10 @@ class _AppShellState extends State<AppShell> {
     final pages = <Widget>[
       HomeScreen(
         catalogueRepository: widget.services.catalogueRepository,
+        viewerLibraryRepository: widget.services.viewerLibraryRepository,
+        viewerId: _viewerId,
         onOpenSeries: _openSeries,
-        onPlay: _openPlayer,
+        onPlay: _openSeriesPlayer,
       ),
       DiscoverScreen(
         catalogueRepository: widget.services.catalogueRepository,
@@ -60,6 +103,7 @@ class _AppShellState extends State<AppShell> {
       ProfileScreen(
         authRepository: widget.services.authRepository,
         backendConfigured: widget.services.backendConfigured,
+        onOpenMyList: _openMyList,
       ),
     ];
 

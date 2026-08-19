@@ -41,7 +41,8 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [ ] Add seasons and replace all remaining demo-only presentation metadata
 - [x] Build the vertical player interface foundation
 - [ ] Connect the player to Cloudflare Stream
-- [ ] Store watch progress and Continue Watching state
+- [x] Store watch progress and drive Continue Watching through viewer repositories
+- [x] Add favourite toggles and a repository-backed My List screen
 - [ ] Add subtitles and accessibility controls
 
 ### 3. Monetization
@@ -72,15 +73,16 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Create a staging Supabase project, apply the reviewed migration, configure authentication URLs, and connect authenticated favourites/watch progress to the UI.
+Implement trusted entitlement, coin-spend, and rewarded-ad server functions with idempotency; then connect the Coins and locked-episode screens to those contracts.
 
 ## Implementation status notes
 
-- Home catalogue content and progress are currently deterministic demo data.
+- Offline mode uses deterministic catalogue/progress data; configured builds query Supabase repositories.
 - Series artwork is currently an original abstract gradient treatment, not final licensed artwork.
 - The episode player currently demonstrates the intended controls and interaction hierarchy; it does not stream video yet.
 - Episode 1–5 free and later episodes locked is represented in the UI, but entitlements are not yet persisted or server verified.
-- Discover, Coins, and Profile are functional navigation destinations with intentional placeholders for their upcoming feature milestones.
+- Discover and Profile have functional flows. Coins remains an intentional placeholder for the monetization milestone.
 - Supabase initialization is opt-in through compile-time definitions; no credentials or secret keys are stored in the repository.
 - The schema migration has been executed successfully against a clean PostgreSQL 16 container. Live Supabase Auth/RLS integration still requires a staging project.
 - Home and series episode lists now load through repository contracts and include loading, empty, and failure behavior. Offline mode supplies deterministic content; configured builds query published Supabase rows.
+- Favourites, My List, player progress saves, and Continue Watching now share one viewer-library contract with offline and Supabase implementations.

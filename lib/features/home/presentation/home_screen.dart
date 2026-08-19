@@ -3,20 +3,25 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_series.dart';
-import '../data/demo_series.dart';
+import '../../library/data/viewer_library_repository.dart';
+import '../../library/domain/viewer_progress.dart';
 import '../domain/series.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.catalogueRepository,
+    required this.viewerLibraryRepository,
+    required this.viewerId,
     required this.onOpenSeries,
     required this.onPlay,
   });
 
   final CatalogueRepository catalogueRepository;
+  final ViewerLibraryRepository viewerLibraryRepository;
+  final String? viewerId;
   final ValueChanged<DramaSeries> onOpenSeries;
-  final VoidCallback onPlay;
+  final ValueChanged<DramaSeries> onPlay;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -32,7 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadCatalogue() {
-    _catalogue = _HomeCatalogue.load(widget.catalogueRepository);
+    _catalogue = _HomeCatalogue.load(
+      widget.catalogueRepository,
+      widget.viewerLibraryRepository,
+      widget.viewerId,
+    );
   }
 
   void _retry() => setState(_loadCatalogue);
@@ -55,9 +64,11 @@ class _HomeScreenState extends State<HomeScreen> {
           .entries
           .map((entry) => _toDramaSeries(entry.value, entry.key + 1))
           .toList();
+      final continueItems = data.progress.map(_progressToDramaSeries).toList();
       return _HomeContent(
         hero: hero,
         trending: trending,
+        continueItems: continueItems,
         onOpenSeries: widget.onOpenSeries,
         onPlay: widget.onPlay,
       );
@@ -69,14 +80,16 @@ class _HomeContent extends StatelessWidget {
   const _HomeContent({
     required this.hero,
     required this.trending,
+    required this.continueItems,
     required this.onOpenSeries,
     required this.onPlay,
   });
 
   final DramaSeries hero;
   final List<DramaSeries> trending;
+  final List<DramaSeries> continueItems;
   final ValueChanged<DramaSeries> onOpenSeries;
-  final VoidCallback onPlay;
+  final ValueChanged<DramaSeries> onPlay;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -88,18 +101,20 @@ class _HomeContent extends StatelessWidget {
           child: _HeroBanner(
             series: hero,
             onOpenSeries: () => onOpenSeries(hero),
-            onPlay: onPlay,
+            onPlay: () => onPlay(hero),
           ),
         ),
-        SliverToBoxAdapter(
-          child: _SeriesSection(
-            title: 'Continue Watching',
-            width: 210,
-            height: 132,
-            series: continueWatching,
-            builder: (item) => _ContinueCard(series: item, onTap: onPlay),
+        if (continueItems.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _SeriesSection(
+              title: 'Continue Watching',
+              width: 210,
+              height: 132,
+              series: continueItems,
+              builder: (item) =>
+                  _ContinueCard(series: item, onTap: () => onPlay(item)),
+            ),
           ),
-        ),
         SliverToBoxAdapter(
           child: _SeriesSection(
             title: 'Trending Now',
@@ -117,11 +132,20 @@ class _HomeContent extends StatelessWidget {
 }
 
 class _HomeCatalogue {
-  const _HomeCatalogue({required this.featured, required this.latest});
+  const _HomeCatalogue({
+    required this.featured,
+    required this.latest,
+    required this.progress,
+  });
   final CatalogueSeries? featured;
   final List<CatalogueSeries> latest;
+  final List<ViewerProgress> progress;
 
-  static Future<_HomeCatalogue> load(CatalogueRepository repository) async {
+  static Future<_HomeCatalogue> load(
+    CatalogueRepository repository,
+    ViewerLibraryRepository library,
+    String? viewerId,
+  ) async {
     final results = await Future.wait([
       repository.featuredSeries(),
       repository.latestSeries(),
@@ -130,9 +154,23 @@ class _HomeCatalogue {
     return _HomeCatalogue(
       featured: featured.isEmpty ? null : featured.first,
       latest: results.last,
+      progress: viewerId == null
+          ? const []
+          : await library.recentProgress(viewerId),
     );
   }
 }
+
+DramaSeries _progressToDramaSeries(ViewerProgress progress) => DramaSeries(
+  id: progress.seriesId,
+  title: progress.seriesTitle,
+  genre: progress.episodeTitle,
+  episodeLabel: 'Episode ${progress.episodeNumber}',
+  colors: const [Color(0xFF243B55), Color(0xFF141E30)],
+  progress: progress.fraction,
+  episodeId: progress.episodeId,
+  positionSeconds: progress.positionSeconds,
+);
 
 DramaSeries _toDramaSeries(CatalogueSeries series, int rank) {
   const palettes = [

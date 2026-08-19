@@ -9,78 +9,95 @@ class ProfileScreen extends StatelessWidget {
     super.key,
     required this.authRepository,
     required this.backendConfigured,
+    required this.onOpenMyList,
   });
 
   final AuthRepository authRepository;
   final bool backendConfigured;
+  final VoidCallback onOpenMyList;
 
   @override
   Widget build(BuildContext context) {
-    if (!backendConfigured) return const _BackendSetupView();
+    if (!backendConfigured) {
+      return _BackendSetupView(onOpenMyList: onOpenMyList);
+    }
     return StreamBuilder<AuthUser?>(
       initialData: authRepository.currentUser,
       stream: authRepository.authStateChanges,
       builder: (context, snapshot) => snapshot.data == null
           ? _AuthenticationView(repository: authRepository)
-          : _SignedInProfile(user: snapshot.data!, repository: authRepository),
+          : _SignedInProfile(
+              user: snapshot.data!,
+              repository: authRepository,
+              onOpenMyList: onOpenMyList,
+            ),
     );
   }
 }
 
 class _BackendSetupView extends StatelessWidget {
-  const _BackendSetupView();
+  const _BackendSetupView({required this.onOpenMyList});
+  final VoidCallback onOpenMyList;
 
   @override
   Widget build(BuildContext context) => SafeArea(
-    child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 78,
-                height: 78,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.coral, AppColors.magenta],
+    child: SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 78,
+                  height: 78,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.coral, AppColors.magenta],
+                    ),
+                    borderRadius: BorderRadius.circular(26),
                   ),
-                  borderRadius: BorderRadius.circular(26),
+                  child: const Icon(Icons.person_rounded, size: 40),
                 ),
-                child: const Icon(Icons.person_rounded, size: 40),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Your ComboReel profile',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'The interface is ready. Connect the Supabase staging project to enable accounts, watch history, favourites, coins, and subscriptions.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.muted, height: 1.5),
-              ),
-              const SizedBox(height: 22),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
+                const SizedBox(height: 24),
+                Text(
+                  'Your ComboReel profile',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                child: const Text(
-                  'Run with:\n--dart-define=SUPABASE_URL=...\n--dart-define=SUPABASE_PUBLISHABLE_KEY=...',
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    color: Color(0xFFD9D9E0),
-                    height: 1.5,
+                const SizedBox(height: 12),
+                const Text(
+                  'The interface is ready. Connect the Supabase staging project to enable accounts, watch history, favourites, coins, and subscriptions.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.muted, height: 1.5),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Run with:\n--dart-define=SUPABASE_URL=...\n--dart-define=SUPABASE_PUBLISHABLE_KEY=...',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      color: Color(0xFFD9D9E0),
+                      height: 1.5,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: onOpenMyList,
+                  icon: const Icon(Icons.bookmark_rounded),
+                  label: const Text('Preview My List'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -276,9 +293,14 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
 }
 
 class _SignedInProfile extends StatelessWidget {
-  const _SignedInProfile({required this.user, required this.repository});
+  const _SignedInProfile({
+    required this.user,
+    required this.repository,
+    required this.onOpenMyList,
+  });
   final AuthUser user;
   final AuthRepository repository;
+  final VoidCallback onOpenMyList;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -297,9 +319,10 @@ class _SignedInProfile extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         const _ProfileTile(icon: Icons.history_rounded, title: 'Watch history'),
-        const _ProfileTile(
+        _ProfileTile(
           icon: Icons.favorite_outline_rounded,
           title: 'My favourites',
+          onTap: onOpenMyList,
         ),
         const _ProfileTile(
           icon: Icons.workspace_premium_outlined,
@@ -325,14 +348,16 @@ class _SignedInProfile extends StatelessWidget {
 }
 
 class _ProfileTile extends StatelessWidget {
-  const _ProfileTile({required this.icon, required this.title});
+  const _ProfileTile({required this.icon, required this.title, this.onTap});
   final IconData icon;
   final String title;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Card(
     color: AppColors.surface,
     child: ListTile(
+      onTap: onTap,
       leading: Icon(icon),
       title: Text(title),
       trailing: const Icon(Icons.chevron_right_rounded),

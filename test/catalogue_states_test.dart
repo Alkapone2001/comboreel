@@ -5,6 +5,7 @@ import 'package:comboreel/features/auth/data/offline_auth_repository.dart';
 import 'package:comboreel/features/catalogue/data/catalogue_repository.dart';
 import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/catalogue/domain/catalogue_series.dart';
+import 'package:comboreel/features/library/data/offline_viewer_library_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -22,11 +23,12 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const ComboReelApp(
+      ComboReelApp(
         services: AppServices(
-          config: AppConfig(supabaseUrl: '', supabasePublishableKey: ''),
-          authRepository: OfflineAuthRepository(),
-          catalogueRepository: _EmptyCatalogueRepository(),
+          config: const AppConfig(supabaseUrl: '', supabasePublishableKey: ''),
+          authRepository: const OfflineAuthRepository(),
+          catalogueRepository: const _EmptyCatalogueRepository(),
+          viewerLibraryRepository: OfflineViewerLibraryRepository(),
         ),
       ),
     );
@@ -40,6 +42,7 @@ AppServices _services(CatalogueRepository catalogue) => AppServices(
   config: const AppConfig(supabaseUrl: '', supabasePublishableKey: ''),
   authRepository: const OfflineAuthRepository(),
   catalogueRepository: catalogue,
+  viewerLibraryRepository: OfflineViewerLibraryRepository(),
 );
 
 class _EmptyCatalogueRepository implements CatalogueRepository {

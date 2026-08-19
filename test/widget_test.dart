@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('home screen presents the ComboReel catalogue', (tester) async {
-    await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpWidget(ComboReelApp());
     await tester.pumpAndSettle();
 
     expect(find.text('ComboReel'), findsOneWidget);
-    expect(find.text('Bound by a Secret'), findsOneWidget);
+    expect(find.text('Bound by a Secret'), findsWidgets);
     expect(find.text('Continue Watching'), findsOneWidget);
     expect(find.text('Watch free'), findsOneWidget);
 
@@ -21,7 +21,7 @@ void main() {
   testWidgets('bottom navigation preserves access to primary areas', (
     tester,
   ) async {
-    await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpWidget(ComboReelApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Coins'));
@@ -36,7 +36,7 @@ void main() {
   testWidgets('featured series opens details and starts playback', (
     tester,
   ) async {
-    await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpWidget(ComboReelApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('My List'));
@@ -61,7 +61,7 @@ void main() {
   });
 
   testWidgets('discover searches and opens a matching series', (tester) async {
-    await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpWidget(ComboReelApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Discover'));

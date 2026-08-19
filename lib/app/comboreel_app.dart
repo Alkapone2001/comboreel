@@ -5,7 +5,8 @@ import '../core/services/app_services.dart';
 import 'app_shell.dart';
 
 class ComboReelApp extends StatelessWidget {
-  const ComboReelApp({super.key, this.services = const AppServices.offline()});
+  ComboReelApp({super.key, AppServices? services})
+    : services = services ?? AppServices.offline();
 
   final AppServices services;
 
