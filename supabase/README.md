@@ -27,9 +27,11 @@ The migration in `migrations/` is the authoritative database definition. Do not 
 
 ## Monetization verification
 
-`202608190002_monetization_functions.sql` adds authoritative access checks, atomic coin spends, and service-role-only credit/reward grants. Run `tests/monetization_contract.sql` after migrations in a disposable database to verify that an idempotent replay cannot double-spend coins or duplicate entitlements.
+`202608190002_monetization_functions.sql` adds authoritative access checks, atomic coin spends, and service-role-only credit/reward grants. `202608190003_rewarded_ads.sql` adds short-lived episode claims and atomic AdMob fulfillment. Run `tests/monetization_contract.sql` after migrations in a disposable database to prove that coin and rewarded-ad replays cannot duplicate value or entitlements.
 
 The `credit_coins_server` and `grant_rewarded_episode_server` functions are intentionally executable only by `service_role`. Call them only after a trusted webhook or Edge Function has verified the payment/ad provider event.
+
+Deploy `functions/rewarded-ad-callback` without gateway JWT verification, set its documented ad-unit allowlist, and configure its public URL as the AdMob SSV callback. The function independently verifies Google's signature before using any service-role mutation.
 
 ## Private video playback
 

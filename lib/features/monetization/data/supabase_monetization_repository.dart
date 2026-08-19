@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/wallet_snapshot.dart';
+import '../domain/rewarded_ad_claim.dart';
 import 'monetization_repository.dart';
 
 class SupabaseMonetizationRepository implements MonetizationRepository {
@@ -69,5 +70,31 @@ class SupabaseMonetizationRepository implements MonetizationRepository {
           )
           .toList(),
     );
+  }
+
+  @override
+  Future<RewardedAdClaim> createRewardedEpisodeClaim(String episodeId) async {
+    final rows = await _client.rpc(
+      'create_rewarded_episode_claim',
+      params: {'p_episode_id': episodeId},
+    ) as List<dynamic>;
+    final row = rows.single as Map<String, dynamic>;
+    return RewardedAdClaim(
+      id: row['claim_id'] as String,
+      expiresAt: DateTime.parse(row['expires_at'] as String),
+    );
+  }
+
+  @override
+  Future<RewardedAdClaimStatus> rewardedEpisodeClaimStatus(
+    String claimId,
+  ) async {
+    final rows = await _client.rpc(
+      'rewarded_episode_claim_status',
+      params: {'p_claim_id': claimId},
+    ) as List<dynamic>;
+    if (rows.isEmpty) return RewardedAdClaimStatus.expired;
+    final value = (rows.single as Map<String, dynamic>)['status'] as String;
+    return RewardedAdClaimStatus.values.byName(value);
   }
 }

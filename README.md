@@ -9,6 +9,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - Chrome for web development
 - A Supabase project when testing live backend features
 - A Cloudflare Stream account and deployed playback Edge Function for live video
+- An AdMob account and deployed rewarded SSV callback for production ad unlocks
 
 ## Run the UI prototype
 
@@ -29,6 +30,11 @@ flutter run -d chrome `
 ```
 
 Never add secret keys, service-role keys, payment secrets, or webhook secrets to Dart source, build arguments used in public logs, or committed files.
+
+For mobile rewarded ads, provide `ADMOB_ANDROID_REWARDED_AD_UNIT_ID` and
+`ADMOB_IOS_REWARDED_AD_UNIT_ID` as Dart defines. The committed manifests contain
+Google's development app IDs; replace them with ComboReel's AdMob app IDs before
+release, and use only Google's test ad units during development.
 
 ## Verify
 

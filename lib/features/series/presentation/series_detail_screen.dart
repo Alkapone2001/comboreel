@@ -6,6 +6,8 @@ import '../../catalogue/domain/catalogue_episode.dart';
 import '../../home/domain/series.dart';
 import '../../library/data/viewer_library_repository.dart';
 import '../../monetization/data/monetization_repository.dart';
+import '../../monetization/data/rewarded_ad_service.dart';
+import '../../monetization/domain/rewarded_ad_claim.dart';
 
 class SeriesDetailScreen extends StatelessWidget {
   const SeriesDetailScreen({
@@ -14,6 +16,7 @@ class SeriesDetailScreen extends StatelessWidget {
     required this.catalogueRepository,
     required this.viewerLibraryRepository,
     required this.monetizationRepository,
+    required this.rewardedAdService,
     required this.viewerId,
     required this.onWatch,
   });
@@ -22,6 +25,7 @@ class SeriesDetailScreen extends StatelessWidget {
   final CatalogueRepository catalogueRepository;
   final ViewerLibraryRepository viewerLibraryRepository;
   final MonetizationRepository monetizationRepository;
+  final RewardedAdService rewardedAdService;
   final String? viewerId;
   final ValueChanged<CatalogueEpisode> onWatch;
 
@@ -215,8 +219,12 @@ class SeriesDetailScreen extends StatelessWidget {
                 _UnlockChoice(
                   icon: Icons.smart_display_rounded,
                   title: 'Watch an ad',
-                  subtitle: 'Unlock this episode free',
-                  onTap: () {},
+                  subtitle: rewardedAdService.isAvailable
+                      ? 'Unlock this episode free'
+                      : 'Available in the iOS and Android apps',
+                  onTap: rewardedAdService.isAvailable
+                      ? () => _unlockWithRewardedAd(context, episode)
+                      : null,
                 ),
                 _UnlockChoice(
                   icon: Icons.monetization_on_rounded,
@@ -265,6 +273,64 @@ class SeriesDetailScreen extends StatelessWidget {
           const SnackBar(content: Text('You do not have enough coins.')),
         );
       }
+    }
+  }
+
+  Future<void> _unlockWithRewardedAd(
+    BuildContext sheetContext,
+    CatalogueEpisode episode,
+  ) async {
+    final userId = viewerId;
+    if (userId == null) {
+      ScaffoldMessenger.of(sheetContext).showSnackBar(
+        const SnackBar(content: Text('Sign in to unlock episodes with an ad.')),
+      );
+      return;
+    }
+    final navigator = Navigator.of(sheetContext);
+    final messenger = ScaffoldMessenger.of(sheetContext);
+    try {
+      final claim = await monetizationRepository.createRewardedEpisodeClaim(
+        episode.id,
+      );
+      await rewardedAdService.show(userId: userId, claimId: claim.id);
+      RewardedAdClaimStatus status = RewardedAdClaimStatus.pending;
+      final verificationDeadline = DateTime.now().toUtc().add(
+        const Duration(seconds: 20),
+      );
+      while (DateTime.now().toUtc().isBefore(verificationDeadline) &&
+          DateTime.now().toUtc().isBefore(claim.expiresAt) &&
+          status == RewardedAdClaimStatus.pending) {
+        status = await monetizationRepository.rewardedEpisodeClaimStatus(
+          claim.id,
+        );
+        if (status == RewardedAdClaimStatus.pending) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+        }
+      }
+      if (status != RewardedAdClaimStatus.verified) {
+        throw const RewardVerificationTimeoutException();
+      }
+      if (sheetContext.mounted) {
+        navigator.pop();
+        onWatch(episode);
+      }
+    } on RewardedAdUnavailableException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } on RewardVerificationTimeoutException {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your reward is still being verified. Try again shortly.',
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('The rewarded unlock could not be completed.'),
+        ),
+      );
     }
   }
 }
@@ -427,13 +493,13 @@ class _UnlockChoice extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
     this.color = AppColors.coral,
   });
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color color;
 
   @override

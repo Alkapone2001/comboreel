@@ -1,10 +1,12 @@
 import '../domain/wallet_snapshot.dart';
+import '../domain/rewarded_ad_claim.dart';
 import 'monetization_repository.dart';
 
 class OfflineMonetizationRepository implements MonetizationRepository {
   int _balance = 25;
   final Set<String> _unlockedEpisodes = {};
   final Map<String, UnlockResult> _requests = {};
+  final Map<String, String> _rewardClaims = {};
   final List<CoinActivity> _activity = [
     CoinActivity(
       amount: 25,
@@ -66,4 +68,24 @@ class OfflineMonetizationRepository implements MonetizationRepository {
     balance: _balance,
     transactions: List.unmodifiable(_activity),
   );
+
+  @override
+  Future<RewardedAdClaim> createRewardedEpisodeClaim(String episodeId) async {
+    final id = 'demo-reward-${_rewardClaims.length + 1}';
+    _rewardClaims[id] = episodeId;
+    return RewardedAdClaim(
+      id: id,
+      expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+    );
+  }
+
+  @override
+  Future<RewardedAdClaimStatus> rewardedEpisodeClaimStatus(
+    String claimId,
+  ) async {
+    final episodeId = _rewardClaims[claimId];
+    if (episodeId == null) return RewardedAdClaimStatus.expired;
+    _unlockedEpisodes.add(episodeId);
+    return RewardedAdClaimStatus.verified;
+  }
 }

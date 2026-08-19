@@ -35,6 +35,7 @@ class _AppShellState extends State<AppShell> {
           catalogueRepository: widget.services.catalogueRepository,
           viewerLibraryRepository: widget.services.viewerLibraryRepository,
           monetizationRepository: widget.services.monetizationRepository,
+          rewardedAdService: widget.services.rewardedAdService,
           viewerId: _viewerId,
           onWatch: _openPlayer,
         ),

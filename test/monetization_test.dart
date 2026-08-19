@@ -3,6 +3,8 @@ import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/home/data/demo_series.dart';
 import 'package:comboreel/features/library/data/offline_viewer_library_repository.dart';
 import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
+import 'package:comboreel/features/monetization/data/rewarded_ad_service.dart';
+import 'package:comboreel/features/monetization/domain/rewarded_ad_claim.dart';
 import 'package:comboreel/features/monetization/presentation/coins_screen.dart';
 import 'package:comboreel/features/series/presentation/series_detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +26,19 @@ void main() {
     expect(first.balance, 20);
     expect(replay.balance, 20);
     expect((await repository.wallet('viewer')).transactions.length, 2);
+  });
+
+  test('offline rewarded claim becomes verified and grants access', () async {
+    final repository = OfflineMonetizationRepository();
+    final claim = await repository.createRewardedEpisodeClaim(
+      'series-episode-6',
+    );
+
+    expect(
+      await repository.rewardedEpisodeClaimStatus(claim.id),
+      RewardedAdClaimStatus.verified,
+    );
+    expect(await repository.hasEpisodeAccess('series-episode-6'), isTrue);
   });
 
   testWidgets('Coins screen renders balance and server-owned purchase state', (
@@ -58,6 +73,7 @@ void main() {
           catalogueRepository: const OfflineCatalogueRepository(),
           viewerLibraryRepository: OfflineViewerLibraryRepository(),
           monetizationRepository: monetization,
+          rewardedAdService: const DemoRewardedAdService(),
           viewerId: 'viewer',
           onWatch: (episode) => openedEpisode = episode,
         ),
@@ -78,5 +94,33 @@ void main() {
 
     expect(openedEpisode?.episodeNumber, 6);
     expect((await monetization.wallet('viewer')).balance, 20);
+  });
+
+  testWidgets('rewarded ad verification unlocks a locked episode', (
+    tester,
+  ) async {
+    CatalogueEpisode? openedEpisode;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SeriesDetailScreen(
+          series: featuredSeries,
+          catalogueRepository: const OfflineCatalogueRepository(),
+          viewerLibraryRepository: OfflineViewerLibraryRepository(),
+          monetizationRepository: OfflineMonetizationRepository(),
+          rewardedAdService: const DemoRewardedAdService(),
+          viewerId: 'viewer',
+          onWatch: (episode) => openedEpisode = episode,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -750));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Episode 6:'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Watch an ad'));
+    await tester.pumpAndSettle();
+
+    expect(openedEpisode?.episodeNumber, 6);
   });
 }

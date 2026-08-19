@@ -10,7 +10,9 @@ import '../../features/library/data/offline_viewer_library_repository.dart';
 import '../../features/library/data/supabase_viewer_library_repository.dart';
 import '../../features/library/data/viewer_library_repository.dart';
 import '../../features/monetization/data/monetization_repository.dart';
+import '../../features/monetization/data/admob_rewarded_ad_service.dart';
 import '../../features/monetization/data/offline_monetization_repository.dart';
+import '../../features/monetization/data/rewarded_ad_service.dart';
 import '../../features/monetization/data/supabase_monetization_repository.dart';
 import '../../features/player/data/offline_playback_repository.dart';
 import '../../features/player/data/playback_repository.dart';
@@ -24,6 +26,7 @@ class AppServices {
     required this.catalogueRepository,
     required this.viewerLibraryRepository,
     required this.monetizationRepository,
+    this.rewardedAdService = const UnavailableRewardedAdService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
   });
 
@@ -33,6 +36,7 @@ class AppServices {
     catalogueRepository: const OfflineCatalogueRepository(),
     viewerLibraryRepository: OfflineViewerLibraryRepository(),
     monetizationRepository: OfflineMonetizationRepository(),
+    rewardedAdService: const DemoRewardedAdService(),
   );
 
   final AppConfig config;
@@ -40,6 +44,7 @@ class AppServices {
   final CatalogueRepository catalogueRepository;
   final ViewerLibraryRepository viewerLibraryRepository;
   final MonetizationRepository monetizationRepository;
+  final RewardedAdService rewardedAdService;
   final PlaybackRepository playbackRepository;
 
   bool get backendConfigured => config.hasSupabase;
@@ -53,6 +58,7 @@ class AppServices {
         catalogueRepository: const OfflineCatalogueRepository(),
         viewerLibraryRepository: OfflineViewerLibraryRepository(),
         monetizationRepository: OfflineMonetizationRepository(),
+        rewardedAdService: const DemoRewardedAdService(),
       );
     }
 
@@ -71,6 +77,10 @@ class AppServices {
       ),
       monetizationRepository: SupabaseMonetizationRepository(
         Supabase.instance.client,
+      ),
+      rewardedAdService: AdMobRewardedAdService(
+        androidAdUnitId: config.admobAndroidRewardedAdUnitId,
+        iosAdUnitId: config.admobIosRewardedAdUnitId,
       ),
       playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),
     );

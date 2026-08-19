@@ -42,3 +42,13 @@ Use separate local, staging, and production environments. Schema changes origina
 Published Cloudflare Stream videos must have signed URLs required. Flutter requests an episode session from the `playback-session` Edge Function. The function checks free status or calls the entitlement RPC as the authenticated viewer, then obtains a short-lived Cloudflare token and returns the direct HLS manifest URL with `Cache-Control: no-store`.
 
 The Cloudflare account ID, scoped Stream API token, customer code, and Supabase service-role key exist only in Edge Function secrets. HLS manifests are read directly from Cloudflare and must not be cached or proxied. Production and staging web origins are allowlisted separately.
+
+## Rewarded-ad integrity
+
+An authenticated viewer requests a short-lived claim tied to exactly one locked,
+published episode. Flutter passes the opaque claim ID as AdMob SSV `custom_data`
+and the authenticated user ID as `user_id`. The public callback verifies Google's
+ECDSA/SHA-256 signature over the untouched query string, enforces the ad unit,
+reward, timestamp, claim owner, and expiry, then atomically records the globally
+unique transaction and grants one entitlement. Client callbacks cannot grant
+access; they only move the interface into a verification wait state.
