@@ -13,8 +13,11 @@ deletion.
   language. Have qualified counsel approve the final text for every launch market.
 - Publish the same versioned Privacy Policy and Terms at stable HTTPS URLs and put
   the privacy URL in App Store Connect and Play Console.
-- Deploy a web-accessible authenticated deletion route. Google Play requires a
-  functional external deletion resource in addition to the in-app flow.
+- Deploy the web build with SPA rewrites and publish `/privacy`, `/terms`, and
+  `/delete-account`. The repository's `web/_redirects` supports Cloudflare Pages
+  and Netlify; other hosts must rewrite those routes to `index.html`. Google Play
+  requires the functional external deletion resource in addition to the in-app
+  flow.
 - Configure Apple and Google subscription-management links in release UX and
   verify cancellation wording with sandbox purchases.
 - Deploy `account-data` with gateway JWT verification enabled. Confirm
