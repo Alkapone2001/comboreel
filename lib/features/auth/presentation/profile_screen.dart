@@ -10,6 +10,8 @@ import '../../notifications/data/push_notification_service.dart';
 import '../../privacy/data/privacy_repository.dart';
 import '../../privacy/presentation/legal_document_screen.dart';
 import '../../privacy/presentation/privacy_center_screen.dart';
+import '../../preferences/data/viewer_preferences_repository.dart';
+import '../../preferences/presentation/playback_preferences_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -19,9 +21,12 @@ class ProfileScreen extends StatelessWidget {
     required this.onOpenMyList,
     required this.adminRepository,
     required this.onOpenAdmin,
+    required this.onOpenWatchHistory,
+    required this.onOpenPremium,
     this.analyticsRepository = const NoopAnalyticsRepository(),
     this.pushNotificationService = const UnavailablePushNotificationService(),
     this.privacyRepository = const UnavailablePrivacyRepository(),
+    this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
   });
 
   final AuthRepository authRepository;
@@ -29,9 +34,12 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onOpenMyList;
   final AdminRepository adminRepository;
   final VoidCallback onOpenAdmin;
+  final VoidCallback onOpenWatchHistory;
+  final VoidCallback onOpenPremium;
   final AnalyticsRepository analyticsRepository;
   final PushNotificationService pushNotificationService;
   final PrivacyRepository privacyRepository;
+  final ViewerPreferencesRepository preferencesRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +60,9 @@ class ProfileScreen extends StatelessWidget {
               analyticsRepository: analyticsRepository,
               pushNotificationService: pushNotificationService,
               privacyRepository: privacyRepository,
+              preferencesRepository: preferencesRepository,
+              onOpenWatchHistory: onOpenWatchHistory,
+              onOpenPremium: onOpenPremium,
             ),
     );
   }
@@ -372,6 +383,9 @@ class _SignedInProfile extends StatelessWidget {
     required this.analyticsRepository,
     required this.pushNotificationService,
     required this.privacyRepository,
+    required this.preferencesRepository,
+    required this.onOpenWatchHistory,
+    required this.onOpenPremium,
   });
   final AuthUser user;
   final AuthRepository repository;
@@ -381,6 +395,9 @@ class _SignedInProfile extends StatelessWidget {
   final AnalyticsRepository analyticsRepository;
   final PushNotificationService pushNotificationService;
   final PrivacyRepository privacyRepository;
+  final ViewerPreferencesRepository preferencesRepository;
+  final VoidCallback onOpenWatchHistory;
+  final VoidCallback onOpenPremium;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -398,19 +415,31 @@ class _SignedInProfile extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 28),
-        const _ProfileTile(icon: Icons.history_rounded, title: 'Watch history'),
+        _ProfileTile(
+          icon: Icons.history_rounded,
+          title: 'Watch history',
+          onTap: onOpenWatchHistory,
+        ),
         _ProfileTile(
           icon: Icons.favorite_outline_rounded,
           title: 'My favourites',
           onTap: onOpenMyList,
         ),
-        const _ProfileTile(
+        _ProfileTile(
           icon: Icons.workspace_premium_outlined,
           title: 'Premium membership',
+          onTap: onOpenPremium,
         ),
-        const _ProfileTile(
+        _ProfileTile(
           icon: Icons.language_rounded,
           title: 'Language & subtitles',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  PlaybackPreferencesScreen(repository: preferencesRepository),
+            ),
+          ),
         ),
         _AnalyticsConsentTile(repository: analyticsRepository),
         if (pushNotificationService.available)

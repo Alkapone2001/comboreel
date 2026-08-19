@@ -31,6 +31,8 @@ import '../../features/monetization/data/stripe_checkout_purchase_service.dart';
 import '../../features/player/data/offline_playback_repository.dart';
 import '../../features/player/data/playback_repository.dart';
 import '../../features/player/data/supabase_playback_repository.dart';
+import '../../features/preferences/data/supabase_viewer_preferences_repository.dart';
+import '../../features/preferences/data/viewer_preferences_repository.dart';
 import '../../features/privacy/data/privacy_repository.dart';
 import '../../features/privacy/data/supabase_privacy_repository.dart';
 import '../config/app_config.dart';
@@ -54,6 +56,8 @@ class AppServices {
     this.privacyRepository = const UnavailablePrivacyRepository(),
     this.deepLinkService = const NoopDeepLinkService(),
     this.contentShareService = const NoopContentShareService(),
+    this.viewerPreferencesRepository =
+        const UnavailableViewerPreferencesRepository(),
   });
 
   factory AppServices.offline() => AppServices(
@@ -68,6 +72,7 @@ class AppServices {
     pushCampaignRepository: const UnavailablePushCampaignRepository(),
     rewardedAdService: const DemoRewardedAdService(),
     storePurchaseService: DemoStorePurchaseService(),
+    viewerPreferencesRepository: OfflineViewerPreferencesRepository(),
   );
 
   final AppConfig config;
@@ -85,6 +90,7 @@ class AppServices {
   final PrivacyRepository privacyRepository;
   final DeepLinkService deepLinkService;
   final ContentShareService contentShareService;
+  final ViewerPreferencesRepository viewerPreferencesRepository;
 
   bool get backendConfigured => config.hasSupabase;
 
@@ -106,6 +112,7 @@ class AppServices {
         storePurchaseService: DemoStorePurchaseService(),
         deepLinkService: deepLinks,
         contentShareService: SystemContentShareService(config.publicAppUrl),
+        viewerPreferencesRepository: OfflineViewerPreferencesRepository(),
       );
     }
 
@@ -165,6 +172,9 @@ class AppServices {
       privacyRepository: SupabasePrivacyRepository(Supabase.instance.client),
       deepLinkService: deepLinks,
       contentShareService: SystemContentShareService(config.publicAppUrl),
+      viewerPreferencesRepository: SupabaseViewerPreferencesRepository(
+        Supabase.instance.client,
+      ),
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/services/content_share_service.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../library/data/viewer_library_repository.dart';
+import '../../preferences/data/viewer_preferences_repository.dart';
 import '../data/playback_repository.dart';
 import '../domain/playback_session.dart';
 
@@ -20,6 +21,7 @@ class EpisodePlayerScreen extends StatefulWidget {
     required this.viewerId,
     this.initialPositionSeconds = 0,
     this.contentShareService = const NoopContentShareService(),
+    this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
   });
 
   final CatalogueEpisode episode;
@@ -28,6 +30,7 @@ class EpisodePlayerScreen extends StatefulWidget {
   final String? viewerId;
   final int initialPositionSeconds;
   final ContentShareService contentShareService;
+  final ViewerPreferencesRepository preferencesRepository;
 
   @override
   State<EpisodePlayerScreen> createState() => _EpisodePlayerScreenState();
@@ -116,7 +119,12 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
         widget.episode.id,
       );
       _session = session;
+      final preferredLanguage = await widget.preferencesRepository
+          .preferredSubtitleLanguage();
       _selectedSubtitle = session.subtitles
+          .where((track) => track.languageCode == preferredLanguage)
+          .firstOrNull;
+      _selectedSubtitle ??= session.subtitles
           .where((track) => track.isDefault)
           .firstOrNull;
       if (session.hlsUrl != null) {

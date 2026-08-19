@@ -11,6 +11,7 @@ import '../features/catalogue/domain/catalogue_series.dart';
 import '../features/home/domain/series.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/library/presentation/my_list_screen.dart';
+import '../features/library/presentation/watch_history_screen.dart';
 import '../features/monetization/presentation/coins_screen.dart';
 import '../features/player/presentation/episode_player_screen.dart';
 import '../features/series/presentation/series_detail_screen.dart';
@@ -162,6 +163,7 @@ class _AppShellState extends State<AppShell> {
           playbackRepository: widget.services.playbackRepository,
           viewerId: _viewerId,
           contentShareService: widget.services.contentShareService,
+          preferencesRepository: widget.services.viewerPreferencesRepository,
         ),
       ),
     );
@@ -188,6 +190,22 @@ class _AppShellState extends State<AppShell> {
           viewerLibraryRepository: widget.services.viewerLibraryRepository,
           viewerId: _viewerId,
           onOpenSeries: _openSeries,
+        ),
+      ),
+    );
+  }
+
+  void _openWatchHistory() {
+    final viewerId = _viewerId;
+    if (viewerId == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => WatchHistoryScreen(
+          catalogueRepository: widget.services.catalogueRepository,
+          viewerLibraryRepository: widget.services.viewerLibraryRepository,
+          viewerId: viewerId,
+          onResume: (episode, positionSeconds) =>
+              _openPlayer(episode, positionSeconds: positionSeconds),
         ),
       ),
     );
@@ -233,9 +251,12 @@ class _AppShellState extends State<AppShell> {
         onOpenMyList: _openMyList,
         adminRepository: widget.services.adminRepository,
         onOpenAdmin: _openAdmin,
+        onOpenWatchHistory: _openWatchHistory,
+        onOpenPremium: () => setState(() => _selectedIndex = 2),
         analyticsRepository: widget.services.analyticsRepository,
         pushNotificationService: widget.services.pushNotificationService,
         privacyRepository: widget.services.privacyRepository,
+        preferencesRepository: widget.services.viewerPreferencesRepository,
       ),
     ];
 
