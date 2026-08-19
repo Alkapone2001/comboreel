@@ -3,6 +3,7 @@ import 'package:comboreel/core/config/app_config.dart';
 import 'package:comboreel/core/services/app_services.dart';
 import 'package:comboreel/features/auth/data/auth_repository.dart';
 import 'package:comboreel/features/auth/domain/auth_user.dart';
+import 'package:comboreel/features/catalogue/data/offline_catalogue_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -16,6 +17,7 @@ void main() {
         supabasePublishableKey: 'test-publishable-key',
       ),
       authRepository: repository,
+      catalogueRepository: const OfflineCatalogueRepository(),
     );
 
     await tester.pumpWidget(ComboReelApp(services: services));

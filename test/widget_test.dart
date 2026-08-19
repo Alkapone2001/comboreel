@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('home screen presents the ComboReel catalogue', (tester) async {
     await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpAndSettle();
 
     expect(find.text('ComboReel'), findsOneWidget);
     expect(find.text('Bound by a Secret'), findsOneWidget);
@@ -14,7 +15,6 @@ void main() {
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
     await tester.pumpAndSettle();
-
     expect(find.text('Trending Now'), findsOneWidget);
   });
 
@@ -22,15 +22,14 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Coins'));
     await tester.pumpAndSettle();
-
     expect(find.text('Coins & rewards'), findsOneWidget);
 
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-
     expect(find.text('Your ComboReel profile'), findsOneWidget);
   });
 
@@ -38,10 +37,10 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('My List'));
     await tester.pumpAndSettle();
-
     expect(find.byType(SeriesDetailScreen), findsOneWidget);
 
     final detailScroll = find.descendant(
@@ -52,11 +51,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Episodes'), findsOneWidget);
-    expect(find.text('Start watching — Episode 1'), findsOneWidget);
+    expect(find.textContaining('Start watching'), findsOneWidget);
+    expect(find.textContaining('The Unexpected Guest'), findsOneWidget);
 
-    await tester.tap(find.text('Start watching — Episode 1'));
+    await tester.tap(find.textContaining('Start watching'));
     await tester.pumpAndSettle();
-
     expect(find.text('EP 1 / 42'), findsOneWidget);
     expect(find.text('Next episode'), findsOneWidget);
   });

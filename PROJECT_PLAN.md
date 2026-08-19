@@ -36,7 +36,8 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Add environment-based Supabase bootstrap and authentication repository
 - [x] Build sign-in, registration, signed-in, and offline profile states
 - [x] Define typed catalogue and viewer-library repositories
-- [ ] Connect home, series, seasons, and episodes to live repositories
+- [x] Connect home and episode lists to offline/Supabase repository composition
+- [ ] Add seasons and replace all remaining demo-only presentation metadata
 - [x] Build the vertical player interface foundation
 - [ ] Connect the player to Cloudflare Stream
 - [ ] Store watch progress and Continue Watching state
@@ -70,7 +71,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Create a staging Supabase project, apply the reviewed migration, configure authentication URLs, and connect the home catalogue to live repository data with offline/error/loading states.
+Create a staging Supabase project, apply the reviewed migration, configure authentication URLs, and build Discover/search against the catalogue repository.
 
 ## Implementation status notes
 
@@ -81,3 +82,4 @@ Create a staging Supabase project, apply the reviewed migration, configure authe
 - Discover, Coins, and Profile are functional navigation destinations with intentional placeholders for their upcoming feature milestones.
 - Supabase initialization is opt-in through compile-time definitions; no credentials or secret keys are stored in the repository.
 - The schema migration has been executed successfully against a clean PostgreSQL 16 container. Live Supabase Auth/RLS integration still requires a staging project.
+- Home and series episode lists now load through repository contracts and include loading, empty, and failure behavior. Offline mode supplies deterministic content; configured builds query published Supabase rows.

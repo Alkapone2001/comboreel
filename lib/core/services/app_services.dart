@@ -3,17 +3,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/offline_auth_repository.dart';
 import '../../features/auth/data/supabase_auth_repository.dart';
+import '../../features/catalogue/data/catalogue_repository.dart';
+import '../../features/catalogue/data/offline_catalogue_repository.dart';
+import '../../features/catalogue/data/supabase_catalogue_repository.dart';
 import '../config/app_config.dart';
 
 class AppServices {
-  const AppServices({required this.config, required this.authRepository});
+  const AppServices({
+    required this.config,
+    required this.authRepository,
+    required this.catalogueRepository,
+  });
 
   const AppServices.offline()
     : config = const AppConfig(supabaseUrl: '', supabasePublishableKey: ''),
-      authRepository = const OfflineAuthRepository();
+      authRepository = const OfflineAuthRepository(),
+      catalogueRepository = const OfflineCatalogueRepository();
 
   final AppConfig config;
   final AuthRepository authRepository;
+  final CatalogueRepository catalogueRepository;
 
   bool get backendConfigured => config.hasSupabase;
 
@@ -23,6 +32,7 @@ class AppServices {
       return AppServices(
         config: config,
         authRepository: const OfflineAuthRepository(),
+        catalogueRepository: const OfflineCatalogueRepository(),
       );
     }
 
@@ -33,6 +43,9 @@ class AppServices {
     return AppServices(
       config: config,
       authRepository: SupabaseAuthRepository(Supabase.instance.client),
+      catalogueRepository: SupabaseCatalogueRepository(
+        Supabase.instance.client,
+      ),
     );
   }
 }

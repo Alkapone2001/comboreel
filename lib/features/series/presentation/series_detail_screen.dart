@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../catalogue/data/catalogue_repository.dart';
+import '../../catalogue/domain/catalogue_episode.dart';
 import '../../home/domain/series.dart';
 
 class SeriesDetailScreen extends StatelessWidget {
   const SeriesDetailScreen({
     super.key,
     required this.series,
+    required this.catalogueRepository,
     required this.onWatch,
   });
 
   final DramaSeries series;
+  final CatalogueRepository catalogueRepository;
   final VoidCallback onWatch;
 
   @override
@@ -119,53 +123,51 @@ class SeriesDetailScreen extends StatelessWidget {
             ],
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-          sliver: SliverList.separated(
-            itemCount: 12,
-            separatorBuilder: (_, _) => const Divider(height: 1, indent: 76),
-            itemBuilder: (context, index) {
-              final episode = index + 1;
-              final isFree = episode <= 5;
-              return ListTile(
-                onTap: isFree
-                    ? onWatch
-                    : () => _showUnlockSheet(context, episode),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 7,
-                ),
-                leading: Container(
-                  width: 58,
-                  height: 58,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: series.colors.take(2).toList(),
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$episode',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
+        SliverToBoxAdapter(
+          child: FutureBuilder<List<CatalogueEpisode>>(
+            future: catalogueRepository.episodesForSeries(series.id),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Padding(
+                  padding: EdgeInsets.all(28),
+                  child: Center(
+                    child: Text(
+                      'Episodes could not load.',
+                      style: TextStyle(color: AppColors.coral),
                     ),
                   ),
-                ),
-                title: Text(
-                  'Episode $episode',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  isFree ? 'Free • 1m 42s' : 'Locked • 1m 38s',
-                  style: TextStyle(
-                    color: isFree ? AppColors.coral : AppColors.muted,
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.all(28),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final episodes = snapshot.data!;
+              if (episodes.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(28),
+                  child: Center(
+                    child: Text(
+                      'Episodes are coming soon.',
+                      style: TextStyle(color: AppColors.muted),
+                    ),
                   ),
-                ),
-                trailing: Icon(
-                  isFree ? Icons.play_circle_fill_rounded : Icons.lock_rounded,
-                  color: isFree ? Colors.white : AppColors.gold,
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: episodes.length,
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, indent: 76),
+                itemBuilder: (context, index) => _EpisodeTile(
+                  episode: episodes[index],
+                  colors: series.colors,
+                  onWatch: onWatch,
+                  onUnlock: () => _showUnlockSheet(context, episodes[index]),
                 ),
               );
             },
@@ -175,7 +177,7 @@ class SeriesDetailScreen extends StatelessWidget {
     ),
   );
 
-  void _showUnlockSheet(BuildContext context, int episode) {
+  void _showUnlockSheet(BuildContext context, CatalogueEpisode episode) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -187,7 +189,7 @@ class SeriesDetailScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Unlock Episode $episode',
+                'Unlock Episode ${episode.episodeNumber}',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
@@ -204,7 +206,7 @@ class SeriesDetailScreen extends StatelessWidget {
               ),
               _UnlockChoice(
                 icon: Icons.monetization_on_rounded,
-                title: 'Use 5 coins',
+                title: 'Use ${episode.coinPrice} coins',
                 subtitle: 'Balance: 25 coins',
                 color: AppColors.gold,
                 onTap: () {},
@@ -218,6 +220,58 @@ class SeriesDetailScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EpisodeTile extends StatelessWidget {
+  const _EpisodeTile({
+    required this.episode,
+    required this.colors,
+    required this.onWatch,
+    required this.onUnlock,
+  });
+  final CatalogueEpisode episode;
+  final List<Color> colors;
+  final VoidCallback onWatch;
+  final VoidCallback onUnlock;
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = episode.durationSeconds ~/ 60;
+    final seconds = episode.durationSeconds % 60;
+    return ListTile(
+      onTap: episode.isFree ? onWatch : onUnlock,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+      leading: Container(
+        width: 58,
+        height: 58,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: colors.take(2).toList()),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          '${episode.episodeNumber}',
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+        ),
+      ),
+      title: Text(
+        'Episode ${episode.episodeNumber}: ${episode.title}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        '${episode.isFree ? 'Free' : 'Locked'} • $minutes:${seconds.toString().padLeft(2, '0')}',
+        style: TextStyle(
+          color: episode.isFree ? AppColors.coral : AppColors.muted,
+        ),
+      ),
+      trailing: Icon(
+        episode.isFree ? Icons.play_circle_fill_rounded : Icons.lock_rounded,
+        color: episode.isFree ? Colors.white : AppColors.gold,
       ),
     );
   }

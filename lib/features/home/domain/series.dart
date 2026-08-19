@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class DramaSeries {
   const DramaSeries({
+    required this.id,
     required this.title,
     required this.genre,
     required this.episodeLabel,
@@ -10,6 +11,7 @@ class DramaSeries {
     this.badge,
   });
 
+  final String id;
   final String title;
   final String genre;
   final String episodeLabel;

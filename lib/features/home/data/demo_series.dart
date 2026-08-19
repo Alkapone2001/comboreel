@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../domain/series.dart';
 
 const featuredSeries = DramaSeries(
+  id: 'demo-bound-by-a-secret',
   title: 'Bound by a Secret',
   genre: 'Romance  •  Mystery',
   episodeLabel: '42 bite-sized episodes',
@@ -12,6 +13,7 @@ const featuredSeries = DramaSeries(
 
 const continueWatching = [
   DramaSeries(
+    id: 'demo-last-promise',
     title: 'The Last Promise',
     genre: 'Romance',
     episodeLabel: 'Episode 8',
@@ -19,6 +21,7 @@ const continueWatching = [
     progress: .62,
   ),
   DramaSeries(
+    id: 'demo-hidden-heir',
     title: 'Hidden Heir',
     genre: 'Drama',
     episodeLabel: 'Episode 3',
@@ -26,6 +29,7 @@ const continueWatching = [
     progress: .31,
   ),
   DramaSeries(
+    id: 'demo-after-midnight',
     title: 'After Midnight',
     genre: 'Thriller',
     episodeLabel: 'Episode 11',
@@ -36,6 +40,7 @@ const continueWatching = [
 
 const trendingSeries = [
   DramaSeries(
+    id: 'demo-stolen-vows',
     title: 'Stolen Vows',
     genre: 'Enemies to lovers',
     episodeLabel: '58 episodes',
@@ -43,6 +48,7 @@ const trendingSeries = [
     badge: '#1',
   ),
   DramaSeries(
+    id: 'demo-the-alibi',
     title: 'The Alibi',
     genre: 'Crime thriller',
     episodeLabel: '36 episodes',
@@ -50,6 +56,7 @@ const trendingSeries = [
     badge: '#2',
   ),
   DramaSeries(
+    id: 'demo-second-chance-ceo',
     title: 'Second Chance CEO',
     genre: 'Romance',
     episodeLabel: '64 episodes',

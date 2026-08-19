@@ -1,17 +1,81 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../catalogue/data/catalogue_repository.dart';
+import '../../catalogue/domain/catalogue_series.dart';
 import '../data/demo_series.dart';
 import '../domain/series.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
+    required this.catalogueRepository,
     required this.onOpenSeries,
     required this.onPlay,
   });
 
-  final VoidCallback onOpenSeries;
+  final CatalogueRepository catalogueRepository;
+  final ValueChanged<DramaSeries> onOpenSeries;
+  final VoidCallback onPlay;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late Future<_HomeCatalogue> _catalogue;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCatalogue();
+  }
+
+  void _loadCatalogue() {
+    _catalogue = _HomeCatalogue.load(widget.catalogueRepository);
+  }
+
+  void _retry() => setState(_loadCatalogue);
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<_HomeCatalogue>(
+    future: _catalogue,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) return _CatalogueError(onRetry: _retry);
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final data = snapshot.data!;
+      if (data.latest.isEmpty) return const _EmptyCatalogue();
+      final hero = _toDramaSeries(data.featured ?? data.latest.first, 0);
+      final trending = data.latest
+          .take(10)
+          .toList()
+          .asMap()
+          .entries
+          .map((entry) => _toDramaSeries(entry.value, entry.key + 1))
+          .toList();
+      return _HomeContent(
+        hero: hero,
+        trending: trending,
+        onOpenSeries: widget.onOpenSeries,
+        onPlay: widget.onPlay,
+      );
+    },
+  );
+}
+
+class _HomeContent extends StatelessWidget {
+  const _HomeContent({
+    required this.hero,
+    required this.trending,
+    required this.onOpenSeries,
+    required this.onPlay,
+  });
+
+  final DramaSeries hero;
+  final List<DramaSeries> trending;
+  final ValueChanged<DramaSeries> onOpenSeries;
   final VoidCallback onPlay;
 
   @override
@@ -21,7 +85,11 @@ class HomeScreen extends StatelessWidget {
       slivers: [
         const SliverToBoxAdapter(child: _TopBar()),
         SliverToBoxAdapter(
-          child: _HeroBanner(onOpenSeries: onOpenSeries, onPlay: onPlay),
+          child: _HeroBanner(
+            series: hero,
+            onOpenSeries: () => onOpenSeries(hero),
+            onPlay: onPlay,
+          ),
         ),
         SliverToBoxAdapter(
           child: _SeriesSection(
@@ -37,12 +105,97 @@ class HomeScreen extends StatelessWidget {
             title: 'Trending Now',
             width: 148,
             height: 238,
-            series: trendingSeries,
-            builder: (item) => _PosterCard(series: item, onTap: onOpenSeries),
+            series: trending,
+            builder: (item) =>
+                _PosterCard(series: item, onTap: () => onOpenSeries(item)),
           ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 110)),
       ],
+    ),
+  );
+}
+
+class _HomeCatalogue {
+  const _HomeCatalogue({required this.featured, required this.latest});
+  final CatalogueSeries? featured;
+  final List<CatalogueSeries> latest;
+
+  static Future<_HomeCatalogue> load(CatalogueRepository repository) async {
+    final results = await Future.wait([
+      repository.featuredSeries(),
+      repository.latestSeries(),
+    ]);
+    final featured = results.first;
+    return _HomeCatalogue(
+      featured: featured.isEmpty ? null : featured.first,
+      latest: results.last,
+    );
+  }
+}
+
+DramaSeries _toDramaSeries(CatalogueSeries series, int rank) {
+  const palettes = [
+    [Color(0xFF6B233F), Color(0xFF19101C), Color(0xFF09090C)],
+    [Color(0xFF8E2D56), Color(0xFF241019)],
+    [Color(0xFF0F4C5C), Color(0xFF081B20)],
+    [Color(0xFF7B4B2A), Color(0xFF21140C)],
+  ];
+  return DramaSeries(
+    id: series.id,
+    title: series.title,
+    genre: series.originalLanguage.toUpperCase(),
+    episodeLabel: series.releaseYear?.toString() ?? 'New series',
+    colors: palettes[rank % palettes.length],
+    badge: rank == 0 ? 'NEW SERIES' : '#$rank',
+  );
+}
+
+class _CatalogueError extends StatelessWidget {
+  const _CatalogueError({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 48, color: AppColors.coral),
+          const SizedBox(height: 16),
+          Text(
+            'Stories could not load',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Check your connection and try again.',
+            style: TextStyle(color: AppColors.muted),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Try again'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _EmptyCatalogue extends StatelessWidget {
+  const _EmptyCatalogue();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Padding(
+      padding: EdgeInsets.all(32),
+      child: Text(
+        'New stories are coming soon.',
+        style: TextStyle(color: AppColors.muted),
+      ),
     ),
   );
 }
@@ -97,8 +250,13 @@ class _TopBar extends StatelessWidget {
 }
 
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner({required this.onOpenSeries, required this.onPlay});
+  const _HeroBanner({
+    required this.series,
+    required this.onOpenSeries,
+    required this.onPlay,
+  });
 
+  final DramaSeries series;
   final VoidCallback onOpenSeries;
   final VoidCallback onPlay;
 
@@ -112,7 +270,7 @@ class _HeroBanner extends StatelessWidget {
       gradient: LinearGradient(
         begin: Alignment.topRight,
         end: Alignment.bottomLeft,
-        colors: featuredSeries.colors,
+        colors: series.colors,
       ),
       boxShadow: const [
         BoxShadow(
@@ -141,15 +299,15 @@ class _HeroBanner extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Badge(label: featuredSeries.badge!),
+                _Badge(label: series.badge!),
                 const SizedBox(height: 14),
                 Text(
-                  featuredSeries.title,
+                  series.title,
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  featuredSeries.genre,
+                  series.genre,
                   style: const TextStyle(
                     color: Color(0xFFE8BDC9),
                     fontWeight: FontWeight.w600,
@@ -157,7 +315,7 @@ class _HeroBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  featuredSeries.episodeLabel,
+                  series.episodeLabel,
                   style: const TextStyle(color: AppColors.muted),
                 ),
                 const SizedBox(height: 20),

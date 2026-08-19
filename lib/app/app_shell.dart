@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/services/app_services.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/profile_screen.dart';
-import '../features/home/data/demo_series.dart';
+import '../features/home/domain/series.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/player/presentation/episode_player_screen.dart';
 import '../features/series/presentation/series_detail_screen.dart';
@@ -20,11 +20,14 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
-  void _openSeries() {
+  void _openSeries(DramaSeries series) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            SeriesDetailScreen(series: featuredSeries, onWatch: _openPlayer),
+        builder: (_) => SeriesDetailScreen(
+          series: series,
+          catalogueRepository: widget.services.catalogueRepository,
+          onWatch: _openPlayer,
+        ),
       ),
     );
   }
@@ -38,7 +41,11 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      HomeScreen(onOpenSeries: _openSeries, onPlay: _openPlayer),
+      HomeScreen(
+        catalogueRepository: widget.services.catalogueRepository,
+        onOpenSeries: _openSeries,
+        onPlay: _openPlayer,
+      ),
       const _PlaceholderPage(
         icon: Icons.explore_rounded,
         title: 'Discover stories',
