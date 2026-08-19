@@ -5,6 +5,7 @@ import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../home/domain/series.dart';
 import '../../library/data/viewer_library_repository.dart';
+import '../../monetization/data/monetization_repository.dart';
 
 class SeriesDetailScreen extends StatelessWidget {
   const SeriesDetailScreen({
@@ -12,6 +13,7 @@ class SeriesDetailScreen extends StatelessWidget {
     required this.series,
     required this.catalogueRepository,
     required this.viewerLibraryRepository,
+    required this.monetizationRepository,
     required this.viewerId,
     required this.onWatch,
   });
@@ -19,6 +21,7 @@ class SeriesDetailScreen extends StatelessWidget {
   final DramaSeries series;
   final CatalogueRepository catalogueRepository;
   final ViewerLibraryRepository viewerLibraryRepository;
+  final MonetizationRepository monetizationRepository;
   final String? viewerId;
   final ValueChanged<CatalogueEpisode> onWatch;
 
@@ -193,45 +196,76 @@ class SeriesDetailScreen extends StatelessWidget {
       showDragHandle: true,
       backgroundColor: AppColors.surface,
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Unlock Episode ${episode.episodeNumber}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Choose how you want to keep watching.',
-                style: TextStyle(color: AppColors.muted),
-              ),
-              const SizedBox(height: 22),
-              _UnlockChoice(
-                icon: Icons.smart_display_rounded,
-                title: 'Watch an ad',
-                subtitle: 'Unlock this episode free',
-                onTap: () {},
-              ),
-              _UnlockChoice(
-                icon: Icons.monetization_on_rounded,
-                title: 'Use ${episode.coinPrice} coins',
-                subtitle: 'Balance: 25 coins',
-                color: AppColors.gold,
-                onTap: () {},
-              ),
-              _UnlockChoice(
-                icon: Icons.workspace_premium_rounded,
-                title: 'Go Premium',
-                subtitle: 'Unlimited episodes, no ads',
-                onTap: () {},
-              ),
-            ],
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Unlock Episode ${episode.episodeNumber}',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Choose how you want to keep watching.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+                const SizedBox(height: 22),
+                _UnlockChoice(
+                  icon: Icons.smart_display_rounded,
+                  title: 'Watch an ad',
+                  subtitle: 'Unlock this episode free',
+                  onTap: () {},
+                ),
+                _UnlockChoice(
+                  icon: Icons.monetization_on_rounded,
+                  title: 'Use ${episode.coinPrice} coins',
+                  subtitle: 'Balance: 25 coins',
+                  color: AppColors.gold,
+                  onTap: () => _unlockWithCoins(context, episode),
+                ),
+                _UnlockChoice(
+                  icon: Icons.workspace_premium_rounded,
+                  title: 'Go Premium',
+                  subtitle: 'Unlimited episodes, no ads',
+                  onTap: () {},
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _unlockWithCoins(
+    BuildContext sheetContext,
+    CatalogueEpisode episode,
+  ) async {
+    if (viewerId == null) {
+      ScaffoldMessenger.of(sheetContext).showSnackBar(
+        const SnackBar(content: Text('Sign in to unlock episodes with coins.')),
+      );
+      return;
+    }
+    try {
+      final result = await monetizationRepository.unlockEpisodeWithCoins(
+        episodeId: episode.id,
+        idempotencyKey:
+            '${episode.id}-${DateTime.now().microsecondsSinceEpoch}',
+      );
+      if (result.accessGranted && sheetContext.mounted) {
+        Navigator.of(sheetContext).pop();
+        onWatch(episode);
+      }
+    } on InsufficientCoinsException {
+      if (sheetContext.mounted) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          const SnackBar(content: Text('You do not have enough coins.')),
+        );
+      }
+    }
   }
 }
 

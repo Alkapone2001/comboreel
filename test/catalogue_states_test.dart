@@ -6,6 +6,7 @@ import 'package:comboreel/features/catalogue/data/catalogue_repository.dart';
 import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/catalogue/domain/catalogue_series.dart';
 import 'package:comboreel/features/library/data/offline_viewer_library_repository.dart';
+import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -29,6 +30,7 @@ void main() {
           authRepository: const OfflineAuthRepository(),
           catalogueRepository: const _EmptyCatalogueRepository(),
           viewerLibraryRepository: OfflineViewerLibraryRepository(),
+          monetizationRepository: OfflineMonetizationRepository(),
         ),
       ),
     );
@@ -43,6 +45,7 @@ AppServices _services(CatalogueRepository catalogue) => AppServices(
   authRepository: const OfflineAuthRepository(),
   catalogueRepository: catalogue,
   viewerLibraryRepository: OfflineViewerLibraryRepository(),
+  monetizationRepository: OfflineMonetizationRepository(),
 );
 
 class _EmptyCatalogueRepository implements CatalogueRepository {

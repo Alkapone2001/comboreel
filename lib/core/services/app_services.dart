@@ -9,6 +9,9 @@ import '../../features/catalogue/data/supabase_catalogue_repository.dart';
 import '../../features/library/data/offline_viewer_library_repository.dart';
 import '../../features/library/data/supabase_viewer_library_repository.dart';
 import '../../features/library/data/viewer_library_repository.dart';
+import '../../features/monetization/data/monetization_repository.dart';
+import '../../features/monetization/data/offline_monetization_repository.dart';
+import '../../features/monetization/data/supabase_monetization_repository.dart';
 import '../config/app_config.dart';
 
 class AppServices {
@@ -17,6 +20,7 @@ class AppServices {
     required this.authRepository,
     required this.catalogueRepository,
     required this.viewerLibraryRepository,
+    required this.monetizationRepository,
   });
 
   factory AppServices.offline() => AppServices(
@@ -24,12 +28,14 @@ class AppServices {
     authRepository: const OfflineAuthRepository(),
     catalogueRepository: const OfflineCatalogueRepository(),
     viewerLibraryRepository: OfflineViewerLibraryRepository(),
+    monetizationRepository: OfflineMonetizationRepository(),
   );
 
   final AppConfig config;
   final AuthRepository authRepository;
   final CatalogueRepository catalogueRepository;
   final ViewerLibraryRepository viewerLibraryRepository;
+  final MonetizationRepository monetizationRepository;
 
   bool get backendConfigured => config.hasSupabase;
 
@@ -41,6 +47,7 @@ class AppServices {
         authRepository: const OfflineAuthRepository(),
         catalogueRepository: const OfflineCatalogueRepository(),
         viewerLibraryRepository: OfflineViewerLibraryRepository(),
+        monetizationRepository: OfflineMonetizationRepository(),
       );
     }
 
@@ -55,6 +62,9 @@ class AppServices {
         Supabase.instance.client,
       ),
       viewerLibraryRepository: SupabaseViewerLibraryRepository(
+        Supabase.instance.client,
+      ),
+      monetizationRepository: SupabaseMonetizationRepository(
         Supabase.instance.client,
       ),
     );

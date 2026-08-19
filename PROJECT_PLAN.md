@@ -47,8 +47,9 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 
 ### 3. Monetization
 
-- [ ] Define entitlements and a server-verified coin ledger
-- [ ] Add locked episode flow and rewarded-ad unlocks
+- [x] Define entitlements and a server-verified coin ledger
+- [x] Add atomic, idempotent coin-based episode unlocks
+- [ ] Connect rewarded-ad verification and unlocks
 - [ ] Add mobile in-app purchases and subscriptions
 - [ ] Add Stripe Checkout and webhooks for web purchases
 - [ ] Add restore-purchases and entitlement reconciliation
@@ -73,7 +74,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Implement trusted entitlement, coin-spend, and rewarded-ad server functions with idempotency; then connect the Coins and locked-episode screens to those contracts.
+Implement AdMob rewarded server-side verification, then add Apple/Google product configuration and Stripe checkout/webhook verification.
 
 ## Implementation status notes
 
@@ -86,3 +87,4 @@ Implement trusted entitlement, coin-spend, and rewarded-ad server functions with
 - The schema migration has been executed successfully against a clean PostgreSQL 16 container. Live Supabase Auth/RLS integration still requires a staging project.
 - Home and series episode lists now load through repository contracts and include loading, empty, and failure behavior. Offline mode supplies deterministic content; configured builds query published Supabase rows.
 - Favourites, My List, player progress saves, and Continue Watching now share one viewer-library contract with offline and Supabase implementations.
+- Coin spends and entitlement grants are atomic database operations with idempotency. A SQL contract test proves replay safety. Purchases and rewarded-ad grants remain disabled until provider verification is configured.

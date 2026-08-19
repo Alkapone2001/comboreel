@@ -31,6 +31,8 @@ Wallet balance changes and coin transaction insertion are intentionally unavaila
 
 Provider webhooks must verify signatures and use stable provider event/transaction IDs as idempotency keys. Replayed events must return success without duplicating value.
 
+The client-facing `unlock_episode_with_coins` RPC derives the user from the authenticated JWT, locks the wallet row, checks existing access and idempotency, debits once, writes the ledger, and grants the entitlement in one transaction. Server-only credit and rewarded-unlock RPCs are revoked from public/anonymous/authenticated roles and granted only to `service_role`.
+
 ## Environments
 
 Use separate local, staging, and production environments. Schema changes originate as reviewed migrations and are promoted in order. App builds receive environment-specific public URL/key pairs through CI configuration. Secrets stay in the backend platform's encrypted secret store.

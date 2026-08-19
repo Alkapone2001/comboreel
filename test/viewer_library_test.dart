@@ -8,6 +8,7 @@ import 'package:comboreel/features/library/data/offline_viewer_library_repositor
 import 'package:comboreel/features/library/data/viewer_library_repository.dart';
 import 'package:comboreel/features/library/domain/viewer_progress.dart';
 import 'package:comboreel/features/player/presentation/episode_player_screen.dart';
+import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -43,6 +44,7 @@ void main() {
       authRepository: const OfflineAuthRepository(),
       catalogueRepository: const OfflineCatalogueRepository(),
       viewerLibraryRepository: library,
+      monetizationRepository: OfflineMonetizationRepository(),
     );
     await tester.pumpWidget(ComboReelApp(services: services));
     await tester.pumpAndSettle();

@@ -24,3 +24,9 @@ The migration in `migrations/` is the authoritative database definition. Do not 
 - Wallet balances, coin transactions, subscriptions, and entitlements cannot be granted by normal clients.
 - Editors/admins are recognized by a server-protected role and manage catalogue records.
 - Payment, rewarded-ad, and coin-spend mutations must be implemented as server-side functions with idempotency and provider verification.
+
+## Monetization verification
+
+`202608190002_monetization_functions.sql` adds authoritative access checks, atomic coin spends, and service-role-only credit/reward grants. Run `tests/monetization_contract.sql` after migrations in a disposable database to verify that an idempotent replay cannot double-spend coins or duplicate entitlements.
+
+The `credit_coins_server` and `grant_rewarded_episode_server` functions are intentionally executable only by `service_role`. Call them only after a trusted webhook or Edge Function has verified the payment/ad provider event.
