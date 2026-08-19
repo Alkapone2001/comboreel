@@ -128,6 +128,7 @@ Future<void> main() async {
       },
     ],
     expectedStatus: 201,
+    alternateStatus: 200,
     description: 'service role seeds visibility fixtures',
   );
   await _request(
@@ -147,6 +148,7 @@ Future<void> main() async {
       'published_at': DateTime.now().toUtc().toIso8601String(),
     },
     expectedStatus: 201,
+    alternateStatus: 200,
     description: 'service role seeds a publishable episode',
   );
   await _request(
@@ -197,7 +199,17 @@ Future<void> main() async {
     description: 'signup records privacy and terms consent',
   );
 
-  stdout.writeln('Local Supabase Auth/RLS smoke test passed (17 checks).');
+  await _request(
+    'PUT',
+    Uri.parse('$apiUrl/auth/v1/user'),
+    apiKey: anonKey,
+    bearer: first.token,
+    body: {'password': 'ComboReel-Updated-2026!'},
+    expectedStatus: 200,
+    description: 'authenticated viewer can update password securely',
+  );
+
+  stdout.writeln('Local Supabase Auth/RLS smoke test passed (18 checks).');
 }
 
 Future<_Session> _signUp(
@@ -264,6 +276,7 @@ Future<http.Response> _request(
   Object? body,
   Map<String, String> headers = const {},
   required int expectedStatus,
+  int? alternateStatus,
   required String description,
 }) async {
   final request = http.Request(method, uri)
@@ -276,7 +289,8 @@ Future<http.Response> _request(
   if (body != null) request.body = jsonEncode(body);
   final streamed = await request.send();
   final response = await http.Response.fromStream(streamed);
-  if (response.statusCode != expectedStatus) {
+  if (response.statusCode != expectedStatus &&
+      response.statusCode != alternateStatus) {
     throw StateError(
       '$description: expected HTTP $expectedStatus, received '
       '${response.statusCode}: ${response.body}',

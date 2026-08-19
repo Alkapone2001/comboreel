@@ -66,6 +66,54 @@ void main() {
     'Web deployment metadata is incomplete.',
   );
 
+  final authConfig = read('supabase/config.toml');
+  final authTemplates = <String, String>{
+    'confirmation': 'supabase/templates/confirmation.html',
+    'recovery': 'supabase/templates/recovery.html',
+    'email_change': 'supabase/templates/email_change.html',
+    'invite': 'supabase/templates/invite.html',
+    'magic_link': 'supabase/templates/magic_link.html',
+  };
+  for (final entry in authTemplates.entries) {
+    require(
+      authConfig.contains('[auth.email.template.${entry.key}]'),
+      'Auth email configuration is missing ${entry.key}.',
+    );
+    final file = File(entry.value);
+    require(
+      file.existsSync(),
+      'Auth email template is missing: ${entry.value}',
+    );
+    if (file.existsSync()) {
+      final html = file.readAsStringSync();
+      require(html.contains('ComboReel'), '${entry.key} is not branded.');
+      require(
+        html.contains('{{ .ConfirmationURL }}'),
+        '${entry.key} must use the Supabase confirmation URL.',
+      );
+      require(
+        !html.toLowerCase().contains('<script'),
+        '${entry.key} must not contain executable scripts.',
+      );
+      require(
+        !html.contains('http://'),
+        '${entry.key} must not contain insecure remote links.',
+      );
+    }
+  }
+  for (final type in ['password_changed', 'email_changed']) {
+    require(
+      authConfig.contains('[auth.email.notification.$type]') &&
+          authConfig.contains('$type]\nenabled = true'),
+      'Security notification $type must be enabled.',
+    );
+    final path = 'supabase/templates/${type}_notification.html';
+    require(
+      File(path).existsSync(),
+      'Security email template is missing: $path',
+    );
+  }
+
   if (failures.isNotEmpty) {
     stderr.writeln('Deployment audit failed:');
     for (final failure in failures) {

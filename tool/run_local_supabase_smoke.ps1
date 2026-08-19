@@ -20,3 +20,8 @@ foreach ($line in $statusLines) {
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
+
+& dart run tool/mailpit_email_audit.dart
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}

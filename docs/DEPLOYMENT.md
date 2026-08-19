@@ -54,6 +54,10 @@ deploying `build/web`. `_headers` and `_redirects` are included in the artifact.
    account, admin, playback, or purchase operations.
 7. Register callback URLs in AdMob, Stripe, App Store Connect, Google Cloud Pub/Sub,
    and Firebase, then retain provider test event IDs as evidence.
+8. Copy the version-controlled files in `supabase/templates/` into hosted Auth
+   Email Templates, enable password/email-change security notifications, and
+   configure production SMTP. Disable provider link tracking because rewritten
+   confirmation URLs can invalidate Supabase Auth actions.
 
 Database migrations are forward-only. Before production migration, take a
 provider backup/PITR checkpoint, review lock/runtime impact, and rehearse on a
@@ -72,6 +76,9 @@ After deployment, record the commit SHA and verify:
   non-enumerating password-reset email delivery/deep links, new-password update,
   email verification/resend, confirmation-gated email change, display-name
   update, and password reauthentication.
+- Confirm recovery, email-change, and password-change emails render with the
+  ComboReel brand, contain the intended HTTPS/native redirect, and reveal no
+  account existence for unknown reset addresses.
 - Load catalogue artwork, a signed HLS stream, subtitles, progress, favourites,
   search, seasons, and the next-episode transition.
 - Verify a coin purchase/unlock replay, rewarded-ad SSV, premium purchase/restore,
