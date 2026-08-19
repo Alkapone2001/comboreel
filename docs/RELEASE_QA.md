@@ -49,11 +49,17 @@ Record device model, OS/browser version, build SHA, expected/actual result,
 screenshots or video, and provider transaction/event IDs. Do not use production
 payments or real customer data for QA.
 
-Android build verification requires a Java 17+ runtime and Android SDK. The
-current Windows workstation exposes Java 8 and no Android SDK, so Gradle/device
-claims must not be signed off here. Install the supported toolchain, copy
-`android/key.properties.example` to the ignored `android/key.properties`, point
-it at the protected release keystore, and build an App Bundle in release CI.
+Android release compilation is enforced in CI with Java 17 and the hosted
+Android SDK. Each run generates an isolated, two-day CI-only signing key, builds
+both an APK and App Bundle, verifies the APK signature with `apksigner`, and
+uploads immutable SHA-named artifacts for 14 days. These artifacts prove release
+compilation and permit internal installation, but must never be uploaded to a
+store. Store submission still requires the protected production upload key via
+ignored `android/key.properties` and signed-device execution of the matrix above.
+
+The current Windows workstation exposes Java 8 and no Android SDK. Local device
+claims must not be signed off here until the operator installs the supported
+toolchain and personally accepts the Android SDK license agreement.
 
 ## Performance evidence required on release hardware
 
