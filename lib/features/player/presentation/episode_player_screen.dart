@@ -1,22 +1,28 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../library/data/viewer_library_repository.dart';
+import '../data/playback_repository.dart';
+import '../domain/playback_session.dart';
 
 class EpisodePlayerScreen extends StatefulWidget {
   const EpisodePlayerScreen({
     super.key,
     required this.episode,
     required this.viewerLibraryRepository,
+    required this.playbackRepository,
     required this.viewerId,
     this.initialPositionSeconds = 0,
   });
 
   final CatalogueEpisode episode;
   final ViewerLibraryRepository viewerLibraryRepository;
+  final PlaybackRepository playbackRepository;
   final String? viewerId;
   final int initialPositionSeconds;
 
@@ -25,9 +31,17 @@ class EpisodePlayerScreen extends StatefulWidget {
 }
 
 class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
-  bool _isPlaying = true;
+  VideoPlayerController? _videoController;
+  PlaybackSession? _session;
+  SubtitleTrack? _selectedSubtitle;
+  bool _demoPlaying = true;
   bool _isLiked = false;
+  bool _loading = true;
+  String? _error;
   late int _positionSeconds;
+  int _lastPersistedSecond = -1;
+
+  bool get _isPlaying => _videoController?.value.isPlaying ?? _demoPlaying;
 
   @override
   void initState() {
@@ -36,10 +50,102 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
       0,
       widget.episode.durationSeconds,
     );
+    unawaited(_loadSession());
+  }
+
+  Future<void> _loadSession() async {
+    try {
+      final session = await widget.playbackRepository.createSession(
+        widget.episode.id,
+      );
+      _session = session;
+      _selectedSubtitle = session.subtitles
+          .where((track) => track.isDefault)
+          .firstOrNull;
+      if (session.hlsUrl != null) {
+        await _initializeVideo(session.hlsUrl!, _selectedSubtitle);
+      } else if (mounted) {
+        setState(() => _loading = false);
+      }
+    } on PlaybackAccessException catch (error) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = error.code;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'playback_unavailable';
+        });
+      }
+    }
+  }
+
+  Future<void> _initializeVideo(Uri hlsUrl, SubtitleTrack? subtitle) async {
+    final previous = _videoController;
+    final shouldPlay = previous?.value.isPlaying ?? true;
+    final resumeAt =
+        previous?.value.position ?? Duration(seconds: _positionSeconds);
+    if (previous != null) {
+      previous.removeListener(_onVideoChanged);
+      await previous.dispose();
+    }
+
+    final controller = VideoPlayerController.networkUrl(
+      hlsUrl,
+      formatHint: VideoFormat.hls,
+      closedCaptionFile: subtitle == null
+          ? null
+          : _loadCaptions(subtitle.vttUrl),
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+    );
+    _videoController = controller;
+    await controller.initialize();
+    await controller.setLooping(false);
+    if (resumeAt > Duration.zero && resumeAt < controller.value.duration) {
+      await controller.seekTo(resumeAt);
+    }
+    controller.addListener(_onVideoChanged);
+    if (shouldPlay) await controller.play();
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _error = null;
+      });
+    }
+  }
+
+  Future<ClosedCaptionFile> _loadCaptions(Uri url) async {
+    final response = await http.get(url);
+    if (response.statusCode != 200) {
+      throw StateError('subtitle_download_failed');
+    }
+    return WebVTTCaptionFile(response.body);
+  }
+
+  void _onVideoChanged() {
+    final controller = _videoController;
+    if (controller == null || !controller.value.isInitialized) return;
+    final second = controller.value.position.inSeconds;
+    if (second != _positionSeconds && mounted) {
+      setState(() => _positionSeconds = second);
+    }
+    if (second > 0 && second % 10 == 0 && second != _lastPersistedSecond) {
+      _lastPersistedSecond = second;
+      unawaited(_saveProgress());
+    }
   }
 
   @override
   void dispose() {
+    final controller = _videoController;
+    if (controller != null) {
+      controller.removeListener(_onVideoChanged);
+      unawaited(controller.dispose());
+    }
     unawaited(_saveProgress());
     super.dispose();
   }
@@ -47,13 +153,14 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   Future<void> _saveProgress() async {
     final viewerId = widget.viewerId;
     if (viewerId == null) return;
+    final duration =
+        _videoController?.value.duration.inSeconds ??
+        widget.episode.durationSeconds;
     await widget.viewerLibraryRepository.saveProgress(
       userId: viewerId,
       episodeId: widget.episode.id,
       positionSeconds: _positionSeconds,
-      completed:
-          widget.episode.durationSeconds > 0 &&
-          _positionSeconds >= widget.episode.durationSeconds - 3,
+      completed: duration > 0 && _positionSeconds >= duration - 3,
     );
   }
 
@@ -63,38 +170,103 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   }
 
   Future<void> _togglePlayback() async {
-    setState(() => _isPlaying = !_isPlaying);
+    final controller = _videoController;
+    if (controller == null) {
+      setState(() => _demoPlaying = !_demoPlaying);
+    } else if (controller.value.isPlaying) {
+      await controller.pause();
+    } else {
+      await controller.play();
+    }
     if (!_isPlaying) await _saveProgress();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _selectSubtitle(SubtitleTrack? track) async {
+    Navigator.of(context).pop();
+    final hlsUrl = _session?.hlsUrl;
+    if (hlsUrl == null || track == _selectedSubtitle) return;
+    setState(() {
+      _selectedSubtitle = track;
+      _loading = true;
+    });
+    try {
+      await _initializeVideo(hlsUrl, track);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'subtitle_unavailable';
+        });
+      }
+    }
+  }
+
+  void _showSubtitles() {
+    final tracks = _session?.subtitles ?? const <SubtitleTrack>[];
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: RadioGroup<SubtitleTrack?>(
+          groupValue: _selectedSubtitle,
+          onChanged: _selectSubtitle,
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 20),
+            children: [
+              const ListTile(
+                title: Text(
+                  'Subtitles',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              RadioListTile<SubtitleTrack?>(
+                value: null,
+                title: const Text('Off'),
+              ),
+              ...tracks.map(
+                (track) => RadioListTile<SubtitleTrack?>(
+                  value: track,
+                  title: Text(track.label),
+                  subtitle: Text(track.languageCode.toUpperCase()),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final duration = widget.episode.durationSeconds;
-    final fraction = duration <= 0 ? 0.0 : _positionSeconds / duration;
+    final controller = _videoController;
+    final duration =
+        controller?.value.duration.inSeconds ?? widget.episode.durationSeconds;
+    final fraction = duration <= 0
+        ? 0.0
+        : (_positionSeconds / duration).clamp(0.0, 1.0);
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF4A1933), Color(0xFF160D15), Colors.black],
+          _VideoSurface(controller: controller),
+          if (_loading) const Center(child: CircularProgressIndicator()),
+          if (_error != null)
+            _PlaybackError(code: _error!, onRetry: _loadSession),
+          if (!_loading && _error == null)
+            Center(
+              child: IconButton.filledTonal(
+                onPressed: _togglePlayback,
+                iconSize: 42,
+                icon: Icon(
+                  _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                ),
+                tooltip: _isPlaying ? 'Pause' : 'Play',
               ),
             ),
-          ),
-          Center(
-            child: IconButton.filledTonal(
-              onPressed: _togglePlayback,
-              iconSize: 42,
-              icon: Icon(
-                _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              ),
-              tooltip: _isPlaying ? 'Pause' : 'Play',
-            ),
-          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -111,7 +283,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
                       _EpisodeChip(number: widget.episode.episodeNumber),
                       const Spacer(),
                       IconButton.filledTonal(
-                        onPressed: () {},
+                        onPressed: _showSubtitles,
                         icon: const Icon(Icons.closed_caption_rounded),
                         tooltip: 'Subtitles',
                       ),
@@ -207,6 +379,16 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
                       ),
                     ],
                   ),
+                  if (controller?.value.caption.text case final caption?
+                      when caption.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      color: Colors.black87,
+                      child: Text(caption, textAlign: TextAlign.center),
+                    ),
                 ],
               ),
             ),
@@ -218,6 +400,76 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
 
   String _formatDuration(int seconds) =>
       '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+}
+
+class _VideoSurface extends StatelessWidget {
+  const _VideoSurface({required this.controller});
+  final VideoPlayerController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller == null || !controller!.value.isInitialized) {
+      return const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF4A1933), Color(0xFF160D15), Colors.black],
+          ),
+        ),
+      );
+    }
+    final size = controller!.value.size;
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: size.width,
+        height: size.height,
+        child: VideoPlayer(controller!),
+      ),
+    );
+  }
+}
+
+class _PlaybackError extends StatelessWidget {
+  const _PlaybackError({required this.code, required this.onRetry});
+  final String code;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Container(
+      margin: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.coral,
+            size: 42,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            code == 'episode_locked'
+                ? 'This episode is locked'
+                : 'Video could not load',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Try again'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _EpisodeChip extends StatelessWidget {

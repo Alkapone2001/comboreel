@@ -8,6 +8,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - Dart 3.13 or compatible
 - Chrome for web development
 - A Supabase project when testing live backend features
+- A Cloudflare Stream account and deployed playback Edge Function for live video
 
 ## Run the UI prototype
 

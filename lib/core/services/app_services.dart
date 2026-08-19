@@ -12,6 +12,9 @@ import '../../features/library/data/viewer_library_repository.dart';
 import '../../features/monetization/data/monetization_repository.dart';
 import '../../features/monetization/data/offline_monetization_repository.dart';
 import '../../features/monetization/data/supabase_monetization_repository.dart';
+import '../../features/player/data/offline_playback_repository.dart';
+import '../../features/player/data/playback_repository.dart';
+import '../../features/player/data/supabase_playback_repository.dart';
 import '../config/app_config.dart';
 
 class AppServices {
@@ -21,6 +24,7 @@ class AppServices {
     required this.catalogueRepository,
     required this.viewerLibraryRepository,
     required this.monetizationRepository,
+    this.playbackRepository = const OfflinePlaybackRepository(),
   });
 
   factory AppServices.offline() => AppServices(
@@ -36,6 +40,7 @@ class AppServices {
   final CatalogueRepository catalogueRepository;
   final ViewerLibraryRepository viewerLibraryRepository;
   final MonetizationRepository monetizationRepository;
+  final PlaybackRepository playbackRepository;
 
   bool get backendConfigured => config.hasSupabase;
 
@@ -67,6 +72,7 @@ class AppServices {
       monetizationRepository: SupabaseMonetizationRepository(
         Supabase.instance.client,
       ),
+      playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),
     );
   }
 }

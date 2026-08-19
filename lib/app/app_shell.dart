@@ -49,6 +49,7 @@ class _AppShellState extends State<AppShell> {
           episode: episode,
           initialPositionSeconds: positionSeconds,
           viewerLibraryRepository: widget.services.viewerLibraryRepository,
+          playbackRepository: widget.services.playbackRepository,
           viewerId: _viewerId,
         ),
       ),

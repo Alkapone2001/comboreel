@@ -8,6 +8,7 @@ import 'package:comboreel/features/library/data/offline_viewer_library_repositor
 import 'package:comboreel/features/library/data/viewer_library_repository.dart';
 import 'package:comboreel/features/library/domain/viewer_progress.dart';
 import 'package:comboreel/features/player/presentation/episode_player_screen.dart';
+import 'package:comboreel/features/player/data/offline_playback_repository.dart';
 import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,10 +85,12 @@ void main() {
           episode: episode,
           initialPositionSeconds: 37,
           viewerLibraryRepository: repository,
+          playbackRepository: const OfflinePlaybackRepository(),
           viewerId: 'viewer-1',
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Pause'));
     await tester.pump();

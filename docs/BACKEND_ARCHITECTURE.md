@@ -36,3 +36,9 @@ The client-facing `unlock_episode_with_coins` RPC derives the user from the auth
 ## Environments
 
 Use separate local, staging, and production environments. Schema changes originate as reviewed migrations and are promoted in order. App builds receive environment-specific public URL/key pairs through CI configuration. Secrets stay in the backend platform's encrypted secret store.
+
+## Video access
+
+Published Cloudflare Stream videos must have signed URLs required. Flutter requests an episode session from the `playback-session` Edge Function. The function checks free status or calls the entitlement RPC as the authenticated viewer, then obtains a short-lived Cloudflare token and returns the direct HLS manifest URL with `Cache-Control: no-store`.
+
+The Cloudflare account ID, scoped Stream API token, customer code, and Supabase service-role key exist only in Edge Function secrets. HLS manifests are read directly from Cloudflare and must not be cached or proxied. Production and staging web origins are allowlisted separately.

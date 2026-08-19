@@ -40,10 +40,12 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Build repository-backed Discover search with loading, empty, and error states
 - [ ] Add seasons and replace all remaining demo-only presentation metadata
 - [x] Build the vertical player interface foundation
-- [ ] Connect the player to Cloudflare Stream
+- [x] Add the signed Cloudflare HLS session boundary and Flutter video lifecycle
+- [ ] Verify Cloudflare Stream playback against the staging account
 - [x] Store watch progress and drive Continue Watching through viewer repositories
 - [x] Add favourite toggles and a repository-backed My List screen
-- [ ] Add subtitles and accessibility controls
+- [x] Add selectable WebVTT subtitle tracks and player loading/error states
+- [ ] Complete screen-reader, focus, contrast, and dynamic-text accessibility audit
 
 ### 3. Monetization
 
@@ -74,7 +76,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Implement AdMob rewarded server-side verification, then add Apple/Google product configuration and Stripe checkout/webhook verification.
+Provision the staging Supabase and Cloudflare projects, deploy the playback function, mark test videos private, and run the first real-device signed-stream test. Then implement AdMob rewarded server-side verification.
 
 ## Implementation status notes
 
@@ -88,3 +90,4 @@ Implement AdMob rewarded server-side verification, then add Apple/Google product
 - Home and series episode lists now load through repository contracts and include loading, empty, and failure behavior. Offline mode supplies deterministic content; configured builds query published Supabase rows.
 - Favourites, My List, player progress saves, and Continue Watching now share one viewer-library contract with offline and Supabase implementations.
 - Coin spends and entitlement grants are atomic database operations with idempotency. A SQL contract test proves replay safety. Purchases and rewarded-ad grants remain disabled until provider verification is configured.
+- Playback sessions are authorized server-side and return short-lived, non-cacheable signed Cloudflare HLS URLs. Flutter includes HLS lifecycle, resume persistence, subtitles, and offline/error behavior; provider staging verification is still required.

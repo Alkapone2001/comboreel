@@ -30,3 +30,7 @@ The migration in `migrations/` is the authoritative database definition. Do not 
 `202608190002_monetization_functions.sql` adds authoritative access checks, atomic coin spends, and service-role-only credit/reward grants. Run `tests/monetization_contract.sql` after migrations in a disposable database to verify that an idempotent replay cannot double-spend coins or duplicate entitlements.
 
 The `credit_coins_server` and `grant_rewarded_episode_server` functions are intentionally executable only by `service_role`. Call them only after a trusted webhook or Edge Function has verified the payment/ad provider event.
+
+## Private video playback
+
+Deploy `functions/playback-session` after setting its documented secrets. Mark every licensed Stream video `requireSignedURLs: true`. The function authorizes the episode before requesting a temporary token; clients never receive the Cloudflare API token or service-role key.
