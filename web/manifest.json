@@ -1,11 +1,11 @@
 {
-    "name": "comboreel",
-    "short_name": "comboreel",
+    "name": "ComboReel",
+    "short_name": "ComboReel",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#100513",
+    "theme_color": "#E82D72",
+    "description": "Original vertical short dramas, one episode at a time.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

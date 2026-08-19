@@ -1,0 +1,10 @@
+{
+  "app_name": "ComboReel",
+  "short_description": "Original vertical short dramas, one fast episode at a time.",
+  "full_description": "Big emotions. Short episodes.\n\nComboReel brings original vertical short dramas to your phone. Discover romance, thrillers, crime stories, family drama, and more, then move through cinematic episodes in a player designed for portrait viewing.\n\nWATCH YOUR WAY\n• Continue from where you stopped across signed-in devices\n• Choose available subtitles\n• Save favourites to My List\n• Find stories by title, genre, and synopsis\n\nUNLOCK MORE STORIES\nStart with free episodes, then unlock more with coins or eligible rewarded ads. Premium membership provides access according to the offer displayed before purchase.\n\nSTAY IN CONTROL\nStory notifications and first-party analytics are optional. The Privacy Center lets you review policies, export account data, change preferences, and permanently delete your account. A public deletion page is available even when the app is not installed.\n\nContent, pricing, availability, and features may vary by country and title. Subscriptions renew unless cancelled through the store account used to purchase.",
+  "category": "ENTERTAINMENT",
+  "contact_email": "REQUIRED_PUBLIC_SUPPORT_EMAIL",
+  "website": "REQUIRED_PUBLIC_MARKETING_URL",
+  "privacy_policy_url": "REQUIRED_PUBLIC_ORIGIN/privacy",
+  "account_deletion_url": "REQUIRED_PUBLIC_ORIGIN/delete-account"
+}
