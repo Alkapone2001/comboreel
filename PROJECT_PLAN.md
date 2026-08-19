@@ -38,14 +38,14 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Define typed catalogue and viewer-library repositories
 - [x] Connect home and episode lists to offline/Supabase repository composition
 - [x] Build repository-backed Discover search with loading, empty, and error states
-- [ ] Add seasons and replace all remaining demo-only presentation metadata
+- [x] Add seasons and replace all remaining demo-only presentation metadata
 - [x] Build the vertical player interface foundation
 - [x] Add the signed Cloudflare HLS session boundary and Flutter video lifecycle
 - [ ] Verify Cloudflare Stream playback against the staging account
 - [x] Store watch progress and drive Continue Watching through viewer repositories
 - [x] Add favourite toggles and a repository-backed My List screen
 - [x] Add selectable WebVTT subtitle tracks and player loading/error states
-- [ ] Complete screen-reader, focus, contrast, and dynamic-text accessibility audit
+- [x] Complete screen-reader, focus, contrast, and dynamic-text accessibility audit
 
 ### 3. Monetization
 
@@ -76,7 +76,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Complete the accessibility audit and replace remaining demo presentation metadata, then begin the privacy/legal and account-deletion release-readiness work. Provider staging resources still need provisioning for end-to-end video, advertising, messaging, store, and payment verification.
+Begin privacy/legal, consent history, data export, and account-deletion release-readiness work. Provider staging resources still need provisioning for end-to-end video, advertising, messaging, store, and payment verification.
 
 ## Implementation status notes
 
@@ -98,3 +98,5 @@ Complete the accessibility audit and replace remaining demo presentation metadat
 - Creator Studio is available only to authenticated Editor/Admin profiles. It supports responsive series and episode editing, pricing, publication, resumable direct-to-Cloudflare uploads, processing polling, and immutable content audit history. Editors cannot assign roles; role changes require service-role server code.
 - First-party analytics is explicitly opt-in, accepts only an allowlisted event/property vocabulary, stores no email or IP payload, and exposes aggregate 30-day operations metrics to Editor/Admin profiles.
 - Push notifications are explicitly opt-in. Firebase device tokens are server-owned, refreshed per device, and disabled on consent withdrawal or invalidation. Creator Studio supports draft/review/confirm campaign delivery with result counts and notification deep links.
+- Catalogue models now preserve synopsis, genres, release year, age rating, episode totals, season identity, series titles, and episode synopsis. Viewer and Creator Studio flows support named seasons without hardcoded detail/player metadata.
+- The accessibility audit covers semantics, keyboard activation, contrast, touch targets, and a 200% text critical journey. Final VoiceOver/TalkBack confirmation remains part of signed-device release QA.

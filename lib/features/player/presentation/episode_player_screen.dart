@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 
@@ -51,6 +52,58 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
       widget.episode.durationSeconds,
     );
     unawaited(_loadSession());
+    unawaited(_loadFavourite());
+  }
+
+  Future<void> _loadFavourite() async {
+    final viewerId = widget.viewerId;
+    if (viewerId == null) return;
+    final favourites = await widget.viewerLibraryRepository.favouriteSeriesIds(
+      viewerId,
+    );
+    if (mounted) {
+      setState(() => _isLiked = favourites.contains(widget.episode.seriesId));
+    }
+  }
+
+  Future<void> _toggleFavourite() async {
+    final viewerId = widget.viewerId;
+    if (viewerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to save this series.')),
+      );
+      return;
+    }
+    final next = !_isLiked;
+    setState(() => _isLiked = next);
+    try {
+      if (next) {
+        await widget.viewerLibraryRepository.addFavourite(
+          userId: viewerId,
+          seriesId: widget.episode.seriesId,
+        );
+      } else {
+        await widget.viewerLibraryRepository.removeFavourite(
+          userId: viewerId,
+          seriesId: widget.episode.seriesId,
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLiked = !next);
+    }
+  }
+
+  Future<void> _share() async {
+    await Clipboard.setData(
+      ClipboardData(
+        text:
+            'comboreel://series/${widget.episode.seriesId}/episode/${widget.episode.id}',
+      ),
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Episode link copied.')));
+    }
   }
 
   Future<void> _loadSession() async {
@@ -298,8 +351,9 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Bound by a Secret',
+                            Text(
+                              widget.episode.seriesTitle ??
+                                  'ComboReel Original',
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
@@ -311,8 +365,10 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
                               style: const TextStyle(color: Color(0xFFD0D0D6)),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
-                              'Every clue changes the story. Keep watching to reveal the next secret.',
+                            Text(
+                              widget.episode.synopsis.isEmpty
+                                  ? 'Keep watching to discover what happens next.'
+                                  : widget.episode.synopsis,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -331,24 +387,19 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
                             icon: _isLiked
                                 ? Icons.favorite_rounded
                                 : Icons.favorite_border_rounded,
-                            label: '12.4K',
+                            label: _isLiked ? 'Saved' : 'Save',
                             color: _isLiked ? AppColors.coral : Colors.white,
-                            onTap: () => setState(() => _isLiked = !_isLiked),
-                          ),
-                          _PlayerAction(
-                            icon: Icons.bookmark_border_rounded,
-                            label: 'Save',
-                            onTap: () {},
+                            onTap: _toggleFavourite,
                           ),
                           _PlayerAction(
                             icon: Icons.ios_share_rounded,
                             label: 'Share',
-                            onTap: () {},
+                            onTap: _share,
                           ),
                           _PlayerAction(
                             icon: Icons.list_rounded,
                             label: 'Episodes',
-                            onTap: () {},
+                            onTap: _close,
                           ),
                         ],
                       ),
@@ -362,22 +413,19 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
                     backgroundColor: Colors.white24,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Text(
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Semantics(
+                      label:
+                          'Playback position ${_formatDuration(_positionSeconds)}',
+                      child: Text(
                         _formatDuration(_positionSeconds),
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.muted,
                         ),
                       ),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.skip_next_rounded),
-                        label: const Text('Next episode'),
-                      ),
-                    ],
+                    ),
                   ),
                   if (controller?.value.caption.text case final caption?
                       when caption.isNotEmpty)

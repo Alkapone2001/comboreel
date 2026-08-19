@@ -63,6 +63,32 @@ class SupabaseAdminRepository implements AdminRepository {
   }
 
   @override
+  Future<List<AdminSeason>> seasons(String seriesId) async {
+    final rows = await _client
+        .from('seasons')
+        .select()
+        .eq('series_id', seriesId)
+        .order('season_number');
+    return rows.map<AdminSeason>((row) => AdminSeason.fromJson(row)).toList();
+  }
+
+  @override
+  Future<AdminSeason> saveSeason(
+    Map<String, dynamic> values, {
+    String? id,
+  }) async {
+    final row = id == null
+        ? await _client.from('seasons').insert(values).select().single()
+        : await _client
+              .from('seasons')
+              .update(values)
+              .eq('id', id)
+              .select()
+              .single();
+    return AdminSeason.fromJson(row);
+  }
+
+  @override
   Future<AdminEpisode> saveEpisode(
     Map<String, dynamic> values, {
     String? id,

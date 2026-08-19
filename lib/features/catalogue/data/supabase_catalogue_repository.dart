@@ -2,17 +2,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/catalogue_episode.dart';
 import '../domain/catalogue_series.dart';
+import '../domain/catalogue_season.dart';
 import 'catalogue_repository.dart';
 
-class SupabaseCatalogueRepository implements CatalogueRepository {
+class SupabaseCatalogueRepository
+    implements CatalogueRepository, SeasonCatalogueRepository {
   SupabaseCatalogueRepository(this._client);
   final SupabaseClient _client;
+  static const _seriesSelect =
+      '*, series_genres(genres(name)), episodes(count)';
 
   @override
   Future<List<CatalogueSeries>> featuredSeries() async {
     final rows = await _client
         .from('series')
-        .select()
+        .select(_seriesSelect)
         .eq('is_featured', true)
         .order('published_at', ascending: false)
         .limit(10);
@@ -23,7 +27,7 @@ class SupabaseCatalogueRepository implements CatalogueRepository {
   Future<List<CatalogueSeries>> latestSeries({int limit = 20}) async {
     final rows = await _client
         .from('series')
-        .select()
+        .select(_seriesSelect)
         .order('published_at', ascending: false)
         .limit(limit);
     return rows.map(CatalogueSeries.fromJson).toList();
@@ -35,7 +39,7 @@ class SupabaseCatalogueRepository implements CatalogueRepository {
     if (normalized.isEmpty) return latestSeries();
     final rows = await _client
         .from('series')
-        .select()
+        .select(_seriesSelect)
         .ilike('title', '%$normalized%')
         .order('published_at', ascending: false)
         .limit(30);
@@ -46,7 +50,7 @@ class SupabaseCatalogueRepository implements CatalogueRepository {
   Future<CatalogueSeries?> seriesBySlug(String slug) async {
     final row = await _client
         .from('series')
-        .select()
+        .select(_seriesSelect)
         .eq('slug', slug)
         .maybeSingle();
     return row == null ? null : CatalogueSeries.fromJson(row);
@@ -56,9 +60,19 @@ class SupabaseCatalogueRepository implements CatalogueRepository {
   Future<List<CatalogueEpisode>> episodesForSeries(String seriesId) async {
     final rows = await _client
         .from('episodes')
-        .select()
+        .select('*, seasons(season_number), series(title)')
         .eq('series_id', seriesId)
         .order('episode_number');
     return rows.map(CatalogueEpisode.fromJson).toList();
+  }
+
+  @override
+  Future<List<CatalogueSeason>> seasonsForSeries(String seriesId) async {
+    final rows = await _client
+        .from('seasons')
+        .select()
+        .eq('series_id', seriesId)
+        .order('season_number');
+    return rows.map(CatalogueSeason.fromJson).toList();
   }
 }

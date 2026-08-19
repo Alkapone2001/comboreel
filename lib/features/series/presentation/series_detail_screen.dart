@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
+import '../../catalogue/domain/catalogue_season.dart';
 import '../../analytics/data/analytics_repository.dart';
 import '../../home/domain/series.dart';
 import '../../library/data/viewer_library_repository.dart';
@@ -91,23 +92,28 @@ class SeriesDetailScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
           sliver: SliverList.list(
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  const _MetadataPill(
-                    label: '9.2',
-                    icon: Icons.star_rounded,
-                    color: AppColors.gold,
+                  if (series.genre.isNotEmpty)
+                    _MetadataPill(label: series.genre),
+                  if (series.releaseYear != null)
+                    _MetadataPill(label: '${series.releaseYear}'),
+                  if (series.ageRating != null)
+                    _MetadataPill(label: series.ageRating!),
+                  _MetadataPill(
+                    label: series.originalLanguage.toUpperCase(),
+                    icon: Icons.language_rounded,
                   ),
-                  const SizedBox(width: 8),
-                  _MetadataPill(label: series.genre),
-                  const SizedBox(width: 8),
-                  const _MetadataPill(label: '2026'),
                 ],
               ),
               const SizedBox(height: 18),
-              const Text(
-                'A guarded heiress and the stranger hired to protect her uncover a secret that ties their families together—and puts both their hearts at risk.',
-                style: TextStyle(color: Color(0xFFD0D0D7), height: 1.55),
+              Text(
+                series.synopsis.isEmpty
+                    ? 'The full synopsis is coming soon.'
+                    : series.synopsis,
+                style: const TextStyle(color: Color(0xFFD0D0D7), height: 1.55),
               ),
               const SizedBox(height: 22),
               SizedBox(
@@ -122,15 +128,20 @@ class SeriesDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 30),
-              Row(
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 16,
+                runSpacing: 4,
                 children: [
                   Text(
                     'Episodes',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  const Spacer(),
                   Text(
-                    series.episodeLabel,
+                    series.episodeCount > 0
+                        ? '${series.episodeCount} episodes'
+                        : series.episodeLabel,
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12,
@@ -143,53 +154,12 @@ class SeriesDetailScreen extends StatelessWidget {
           ),
         ),
         SliverToBoxAdapter(
-          child: FutureBuilder<List<CatalogueEpisode>>(
-            future: catalogueRepository.episodesForSeries(series.id),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return const Padding(
-                  padding: EdgeInsets.all(28),
-                  child: Center(
-                    child: Text(
-                      'Episodes could not load.',
-                      style: TextStyle(color: AppColors.coral),
-                    ),
-                  ),
-                );
-              }
-              if (!snapshot.hasData) {
-                return const Padding(
-                  padding: EdgeInsets.all(28),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              final episodes = snapshot.data!;
-              if (episodes.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(28),
-                  child: Center(
-                    child: Text(
-                      'Episodes are coming soon.',
-                      style: TextStyle(color: AppColors.muted),
-                    ),
-                  ),
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: episodes.length,
-                separatorBuilder: (_, _) =>
-                    const Divider(height: 1, indent: 76),
-                itemBuilder: (context, index) => _EpisodeTile(
-                  episode: episodes[index],
-                  colors: series.colors,
-                  onWatch: () => onWatch(episodes[index]),
-                  onUnlock: () => _showUnlockSheet(context, episodes[index]),
-                ),
-              );
-            },
+          child: _EpisodeCatalogue(
+            repository: catalogueRepository,
+            seriesId: series.id,
+            colors: series.colors,
+            onWatch: onWatch,
+            onUnlock: (episode) => _showUnlockSheet(context, episode),
           ),
         ),
       ],
@@ -361,6 +331,159 @@ class SeriesDetailScreen extends StatelessWidget {
   }
 }
 
+class _EpisodeCatalogue extends StatefulWidget {
+  const _EpisodeCatalogue({
+    required this.repository,
+    required this.seriesId,
+    required this.colors,
+    required this.onWatch,
+    required this.onUnlock,
+  });
+
+  final CatalogueRepository repository;
+  final String seriesId;
+  final List<Color> colors;
+  final ValueChanged<CatalogueEpisode> onWatch;
+  final ValueChanged<CatalogueEpisode> onUnlock;
+
+  @override
+  State<_EpisodeCatalogue> createState() => _EpisodeCatalogueState();
+}
+
+class _EpisodeCatalogueState extends State<_EpisodeCatalogue> {
+  late Future<_EpisodeCatalogueData> _data;
+  String? _selectedSeasonId;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() => _data = _load();
+
+  Future<_EpisodeCatalogueData> _load() async {
+    final episodes = await widget.repository.episodesForSeries(widget.seriesId);
+    final seasons = widget.repository is SeasonCatalogueRepository
+        ? await (widget.repository as SeasonCatalogueRepository)
+              .seasonsForSeries(widget.seriesId)
+        : <CatalogueSeason>[];
+    return _EpisodeCatalogueData(episodes: episodes, seasons: seasons);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<_EpisodeCatalogueData>(
+    future: _data,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Padding(
+          padding: const EdgeInsets.all(28),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Episodes could not load.',
+                  style: TextStyle(color: AppColors.coral),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => setState(_reload),
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      if (!snapshot.hasData) {
+        return Padding(
+          padding: const EdgeInsets.all(28),
+          child: Center(
+            child: Semantics(
+              label: 'Loading episodes',
+              child: const CircularProgressIndicator(),
+            ),
+          ),
+        );
+      }
+      final data = snapshot.data!;
+      if (data.episodes.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.all(28),
+          child: Center(
+            child: Text(
+              'Episodes are coming soon.',
+              style: TextStyle(color: AppColors.muted),
+            ),
+          ),
+        );
+      }
+      final selectedId = _selectedSeasonId ?? data.seasons.firstOrNull?.id;
+      final visible = selectedId == null
+          ? data.episodes
+          : data.episodes
+                .where((episode) => episode.seasonId == selectedId)
+                .toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (data.seasons.length > 1)
+            Semantics(
+              container: true,
+              label: 'Choose season',
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: data.seasons
+                      .map(
+                        (season) => ChoiceChip(
+                          label: Text(season.label),
+                          selected: selectedId == season.id,
+                          onSelected: (_) =>
+                              setState(() => _selectedSeasonId = season.id),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          if (visible.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(28),
+              child: Center(child: Text('No episodes in this season yet.')),
+            )
+          else
+            ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visible.length,
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 76),
+              itemBuilder: (context, index) {
+                final episode = visible[index];
+                return _EpisodeTile(
+                  episode: episode,
+                  colors: widget.colors,
+                  onWatch: () => widget.onWatch(episode),
+                  onUnlock: () => widget.onUnlock(episode),
+                );
+              },
+            ),
+        ],
+      );
+    },
+  );
+}
+
+class _EpisodeCatalogueData {
+  const _EpisodeCatalogueData({required this.episodes, required this.seasons});
+  final List<CatalogueEpisode> episodes;
+  final List<CatalogueSeason> seasons;
+}
+
 class _EpisodeTile extends StatelessWidget {
   const _EpisodeTile({
     required this.episode,
@@ -486,31 +609,40 @@ class _FavouriteButtonState extends State<_FavouriteButton> {
 }
 
 class _MetadataPill extends StatelessWidget {
-  const _MetadataPill({required this.label, this.icon, this.color});
+  const _MetadataPill({required this.label, this.icon});
   final String label;
   final IconData? icon;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) => Container(
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.sizeOf(context).width - 40,
+    ),
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: .07),
       borderRadius: BorderRadius.circular(99),
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 4),
-        ],
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-      ],
-    ),
+    child: icon == null
+        ? Text(
+            label,
+            softWrap: true,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
   );
 }
 

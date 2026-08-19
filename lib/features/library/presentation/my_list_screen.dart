@@ -120,8 +120,17 @@ DramaSeries _presentation(CatalogueSeries series, int index) {
   return DramaSeries(
     id: series.id,
     title: series.title,
-    genre: series.originalLanguage.toUpperCase(),
-    episodeLabel: series.releaseYear?.toString() ?? 'New series',
+    genre: series.genres.isEmpty
+        ? series.originalLanguage.toUpperCase()
+        : series.genres.join(' · '),
+    episodeLabel: series.episodeCount > 0
+        ? '${series.episodeCount} episodes'
+        : 'New series',
     colors: palettes[index % palettes.length],
+    synopsis: series.synopsis,
+    releaseYear: series.releaseYear,
+    ageRating: series.ageRating,
+    originalLanguage: series.originalLanguage,
+    episodeCount: series.episodeCount,
   );
 }

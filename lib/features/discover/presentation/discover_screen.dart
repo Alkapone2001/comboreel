@@ -150,9 +150,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             return SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
               sliver: SliverGrid.builder(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 220,
-                  mainAxisExtent: 265,
+                  mainAxisExtent:
+                      265 +
+                      ((MediaQuery.textScalerOf(context).scale(1) - 1).clamp(
+                            0,
+                            1.5,
+                          ) *
+                          45),
                   crossAxisSpacing: 14,
                   mainAxisSpacing: 18,
                 ),
@@ -179,20 +185,15 @@ class _GenreChips extends StatelessWidget {
   const _GenreChips();
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 38,
-    child: ListView(
-      scrollDirection: Axis.horizontal,
-      children: const [
-        Chip(label: Text('Romance')),
-        SizedBox(width: 8),
-        Chip(label: Text('Thriller')),
-        SizedBox(width: 8),
-        Chip(label: Text('Crime')),
-        SizedBox(width: 8),
-        Chip(label: Text('Family Drama')),
-      ],
-    ),
+  Widget build(BuildContext context) => const Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      Chip(label: Text('Romance')),
+      Chip(label: Text('Thriller')),
+      Chip(label: Text('Crime')),
+      Chip(label: Text('Family Drama')),
+    ],
   );
 }
 
@@ -209,45 +210,52 @@ class _DiscoverCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final presentation = _presentationSeries(series, rank);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: presentation.colors,
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: 'Open ${series.title}, ${series.episodeCount} episodes',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: presentation.colors,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .07),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: .07)),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.play_circle_outline_rounded,
-                  size: 46,
-                  color: Color(0xCCFFFFFF),
+                child: const Center(
+                  child: Icon(
+                    Icons.play_circle_outline_rounded,
+                    size: 46,
+                    color: Color(0xCCFFFFFF),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            series.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            series.releaseYear?.toString() ?? 'New series',
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
-          ),
-        ],
+            const SizedBox(height: 9),
+            Text(
+              series.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              series.releaseYear?.toString() ?? 'New series',
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -299,9 +307,18 @@ DramaSeries _presentationSeries(CatalogueSeries series, int rank) {
   return DramaSeries(
     id: series.id,
     title: series.title,
-    genre: series.originalLanguage.toUpperCase(),
-    episodeLabel: series.releaseYear?.toString() ?? 'New series',
+    genre: series.genres.isEmpty
+        ? series.originalLanguage.toUpperCase()
+        : series.genres.join(' · '),
+    episodeLabel: series.episodeCount > 0
+        ? '${series.episodeCount} episodes'
+        : 'New series',
     colors: palettes[rank % palettes.length],
     badge: rank < 3 ? '#${rank + 1}' : null,
+    synopsis: series.synopsis,
+    releaseYear: series.releaseYear,
+    ageRating: series.ageRating,
+    originalLanguage: series.originalLanguage,
+    episodeCount: series.episodeCount,
   );
 }

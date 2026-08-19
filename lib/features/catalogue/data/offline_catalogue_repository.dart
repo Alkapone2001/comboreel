@@ -1,8 +1,10 @@
 import '../domain/catalogue_episode.dart';
 import '../domain/catalogue_series.dart';
+import '../domain/catalogue_season.dart';
 import 'catalogue_repository.dart';
 
-class OfflineCatalogueRepository implements CatalogueRepository {
+class OfflineCatalogueRepository
+    implements CatalogueRepository, SeasonCatalogueRepository {
   const OfflineCatalogueRepository();
 
   static const _series = [
@@ -16,6 +18,9 @@ class OfflineCatalogueRepository implements CatalogueRepository {
       originalLanguage: 'en',
       releaseYear: 2026,
       isFeatured: true,
+      ageRating: '16+',
+      genres: ['Romance', 'Mystery'],
+      episodeCount: 42,
     ),
     CatalogueSeries(
       id: 'demo-stolen-vows',
@@ -27,6 +32,9 @@ class OfflineCatalogueRepository implements CatalogueRepository {
       originalLanguage: 'en',
       releaseYear: 2026,
       isFeatured: false,
+      ageRating: '13+',
+      genres: ['Romance', 'Drama'],
+      episodeCount: 36,
     ),
     CatalogueSeries(
       id: 'demo-the-alibi',
@@ -38,6 +46,9 @@ class OfflineCatalogueRepository implements CatalogueRepository {
       originalLanguage: 'en',
       releaseYear: 2026,
       isFeatured: false,
+      ageRating: '16+',
+      genres: ['Crime', 'Thriller'],
+      episodeCount: 36,
     ),
     CatalogueSeries(
       id: 'demo-second-chance-ceo',
@@ -49,6 +60,9 @@ class OfflineCatalogueRepository implements CatalogueRepository {
       originalLanguage: 'en',
       releaseYear: 2026,
       isFeatured: false,
+      ageRating: '13+',
+      genres: ['Romance', 'Family Drama'],
+      episodeCount: 40,
     ),
   ];
 
@@ -90,6 +104,29 @@ class OfflineCatalogueRepository implements CatalogueRepository {
           thumbnailUrl: null,
           isFree: index < 5,
           coinPrice: 5,
+          seasonId: '$seriesId-season-${(index ~/ 14) + 1}',
+          seasonNumber: (index ~/ 14) + 1,
+          seriesTitle: _series
+              .where((series) => series.id == seriesId)
+              .firstOrNull
+              ?.title,
+          synopsis: _episodeSynopsis(index + 1),
+        ),
+      );
+
+  @override
+  Future<List<CatalogueSeason>> seasonsForSeries(String seriesId) async =>
+      List.generate(
+        3,
+        (index) => CatalogueSeason(
+          id: '$seriesId-season-${index + 1}',
+          seriesId: seriesId,
+          number: index + 1,
+          title: switch (index) {
+            0 => 'The Secret',
+            1 => 'The Reckoning',
+            _ => 'The Choice',
+          },
         ),
       );
 
@@ -100,5 +137,14 @@ class OfflineCatalogueRepository implements CatalogueRepository {
     4 => 'The Hidden Photograph',
     5 => 'No Way Back',
     _ => 'The Secret Deepens',
+  };
+
+  static String _episodeSynopsis(int episode) => switch (episode) {
+    1 => 'A late-night arrival forces Ava to question everything she knows.',
+    2 => 'A promise made under pressure binds two unlikely allies.',
+    3 => 'Ava follows a clue that was meant to stay hidden.',
+    4 => 'An old photograph reveals a connection between both families.',
+    5 => 'The truth closes in, leaving no safe way back.',
+    _ => 'A new clue raises the stakes and draws the secret closer to the surface.',
   };
 }

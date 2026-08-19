@@ -160,6 +160,8 @@ class _AppShellState extends State<AppShell> {
         viewerId: _viewerId,
         onOpenSeries: _openSeries,
         onPlay: _openSeriesPlayer,
+        onSearch: () => setState(() => _selectedIndex = 1),
+        onNotifications: () => setState(() => _selectedIndex = 3),
       ),
       DiscoverScreen(
         catalogueRepository: widget.services.catalogueRepository,

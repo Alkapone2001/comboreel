@@ -39,7 +39,7 @@ void main() {
     await tester.pumpWidget(ComboReelApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('My List'));
+    await tester.tap(find.text('View details'));
     await tester.pumpAndSettle();
     expect(find.byType(SeriesDetailScreen), findsOneWidget);
 
@@ -57,7 +57,7 @@ void main() {
     await tester.tap(find.textContaining('Start watching'));
     await tester.pumpAndSettle();
     expect(find.text('EP 1 / 42'), findsOneWidget);
-    expect(find.text('Next episode'), findsOneWidget);
+    expect(find.text('Episodes'), findsOneWidget);
   });
 
   testWidgets('discover searches and opens a matching series', (tester) async {

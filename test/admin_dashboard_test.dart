@@ -30,6 +30,11 @@ void main() {
     expect(find.text('Midnight Contract'), findsWidgets);
     expect(find.text('DRAFT'), findsWidgets);
     expect(find.text('Add episode'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byTooltip('Upload video'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.byTooltip('Upload video'), findsOneWidget);
     expect(find.byTooltip('Publish'), findsOneWidget);
   });
@@ -120,6 +125,16 @@ class _FakeAdminRepository implements AdminRepository {
     ),
   ];
 
+  @override
+  Future<List<AdminSeason>> seasons(String seriesId) async => const [
+    AdminSeason(
+      id: 'season-1',
+      seriesId: 'series-1',
+      number: 1,
+      title: 'The Secret',
+    ),
+  ];
+
   Never _unused() => throw UnimplementedError();
 
   @override
@@ -137,6 +152,11 @@ class _FakeAdminRepository implements AdminRepository {
   }) async => _unused();
   @override
   Future<AdminSeries> saveSeries(
+    Map<String, dynamic> values, {
+    String? id,
+  }) async => _unused();
+  @override
+  Future<AdminSeason> saveSeason(
     Map<String, dynamic> values, {
     String? id,
   }) async => _unused();

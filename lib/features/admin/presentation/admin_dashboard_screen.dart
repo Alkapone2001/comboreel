@@ -37,6 +37,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<AdminSeries> _series = const [];
   AdminSeries? _selected;
   List<AdminEpisode> _episodes = const [];
+  List<AdminSeason> _seasons = const [];
 
   @override
   void initState() {
@@ -58,7 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _loading = false;
       });
       if (_selected != null) {
-        await _loadEpisodes(_selected!.id);
+        await _loadSeriesContent(_selected!.id);
       }
     } catch (error) {
       if (mounted) {
@@ -75,12 +76,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (mounted) setState(() => _episodes = episodes);
   }
 
+  Future<void> _loadSeriesContent(String seriesId) async {
+    final results = await Future.wait([
+      widget.repository.episodes(seriesId),
+      widget.repository.seasons(seriesId),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _episodes = results[0] as List<AdminEpisode>;
+      _seasons = results[1] as List<AdminSeason>;
+    });
+  }
+
   Future<void> _select(AdminSeries item) async {
     setState(() {
       _selected = item;
       _episodes = const [];
+      _seasons = const [];
     });
-    await _loadEpisodes(item.id);
+    await _loadSeriesContent(item.id);
   }
 
   Future<void> _editSeries([AdminSeries? item]) async {
@@ -100,12 +114,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (selected == null) return;
     final values = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _EpisodeEditor(seriesId: selected.id, item: item),
+      builder: (_) =>
+          _EpisodeEditor(seriesId: selected.id, seasons: _seasons, item: item),
     );
     if (values == null) return;
     await _work(() async {
       await widget.repository.saveEpisode(values, id: item?.id);
       await _loadEpisodes(selected.id);
+    });
+  }
+
+  Future<void> _addSeason() async {
+    final selected = _selected;
+    if (selected == null) return;
+    final values = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _SeasonEditor(
+        seriesId: selected.id,
+        suggestedNumber: (_seasons.lastOrNull?.number ?? 0) + 1,
+      ),
+    );
+    if (values == null) return;
+    await _work(() async {
+      await widget.repository.saveSeason(values);
+      await _loadSeriesContent(selected.id);
     });
   }
 
@@ -288,11 +320,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               final detail = _ContentPanel(
                 series: _selected,
                 episodes: _episodes,
+                seasons: _seasons,
                 onEditSeries: () => _editSeries(_selected),
                 onToggleSeries: _selected == null
                     ? null
                     : () => _toggleSeries(_selected!),
                 onAddEpisode: () => _editEpisode(),
+                onAddSeason: _addSeason,
                 onEditEpisode: _editEpisode,
                 onToggleEpisode: _toggleEpisode,
                 onUpload: _upload,
@@ -703,18 +737,22 @@ class _ContentPanel extends StatelessWidget {
   const _ContentPanel({
     required this.series,
     required this.episodes,
+    required this.seasons,
     required this.onEditSeries,
     required this.onToggleSeries,
     required this.onAddEpisode,
+    required this.onAddSeason,
     required this.onEditEpisode,
     required this.onToggleEpisode,
     required this.onUpload,
   });
   final AdminSeries? series;
   final List<AdminEpisode> episodes;
+  final List<AdminSeason> seasons;
   final VoidCallback onEditSeries;
   final VoidCallback? onToggleSeries;
   final VoidCallback onAddEpisode;
+  final VoidCallback onAddSeason;
   final ValueChanged<AdminEpisode> onEditEpisode;
   final ValueChanged<AdminEpisode> onToggleEpisode;
   final ValueChanged<AdminEpisode> onUpload;
@@ -771,17 +809,40 @@ class _ContentPanel extends StatelessWidget {
           style: const TextStyle(color: AppColors.muted, height: 1.5),
         ),
         const SizedBox(height: 30),
-        Row(
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            Text('Episodes', style: Theme.of(context).textTheme.titleLarge),
-            const Spacer(),
-            FilledButton.tonalIcon(
-              onPressed: onAddEpisode,
-              icon: const Icon(Icons.add),
-              label: const Text('Add episode'),
+            Text(
+              'Seasons & episodes',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            Wrap(
+              spacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onAddSeason,
+                  icon: const Icon(Icons.playlist_add),
+                  label: const Text('Add season'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: onAddEpisode,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add episode'),
+                ),
+              ],
             ),
           ],
         ),
+        if (seasons.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            seasons.map((season) => season.label).join(' · '),
+            style: const TextStyle(color: AppColors.muted),
+          ),
+        ],
         const SizedBox(height: 12),
         ...episodes.map(
           (episode) => Card(
@@ -938,9 +999,94 @@ class _SeriesEditorState extends State<_SeriesEditor> {
   );
 }
 
-class _EpisodeEditor extends StatefulWidget {
-  const _EpisodeEditor({required this.seriesId, this.item});
+class _SeasonEditor extends StatefulWidget {
+  const _SeasonEditor({required this.seriesId, required this.suggestedNumber});
   final String seriesId;
+  final int suggestedNumber;
+
+  @override
+  State<_SeasonEditor> createState() => _SeasonEditorState();
+}
+
+class _SeasonEditorState extends State<_SeasonEditor> {
+  final _key = GlobalKey<FormState>();
+  late final TextEditingController _number;
+  final _title = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _number = TextEditingController(text: '${widget.suggestedNumber}');
+  }
+
+  @override
+  void dispose() {
+    _number.dispose();
+    _title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Add season'),
+    content: SizedBox(
+      width: 420,
+      child: Form(
+        key: _key,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _number,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Season number',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) => (int.tryParse(value ?? '') ?? 0) < 1
+                  ? 'Use 1 or higher.'
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _title,
+              decoration: const InputDecoration(
+                labelText: 'Season title (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (!_key.currentState!.validate()) return;
+          Navigator.pop(context, {
+            'series_id': widget.seriesId,
+            'season_number': int.parse(_number.text),
+            'title': _title.text.trim().isEmpty ? null : _title.text.trim(),
+          });
+        },
+        child: const Text('Save season'),
+      ),
+    ],
+  );
+}
+
+class _EpisodeEditor extends StatefulWidget {
+  const _EpisodeEditor({
+    required this.seriesId,
+    required this.seasons,
+    this.item,
+  });
+  final String seriesId;
+  final List<AdminSeason> seasons;
   final AdminEpisode? item;
   @override
   State<_EpisodeEditor> createState() => _EpisodeEditorState();
@@ -952,6 +1098,7 @@ class _EpisodeEditorState extends State<_EpisodeEditor> {
   late final TextEditingController number;
   late final TextEditingController coins;
   bool free = false;
+  String? seasonId;
   @override
   void initState() {
     super.initState();
@@ -960,6 +1107,7 @@ class _EpisodeEditorState extends State<_EpisodeEditor> {
     number = TextEditingController(text: item?.number.toString());
     coins = TextEditingController(text: (item?.coinPrice ?? 5).toString());
     free = item?.isFree ?? false;
+    seasonId = item?.seasonId ?? widget.seasons.firstOrNull?.id;
   }
 
   @override
@@ -980,6 +1128,25 @@ class _EpisodeEditorState extends State<_EpisodeEditor> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (widget.seasons.isNotEmpty) ...[
+              DropdownButtonFormField<String>(
+                initialValue: seasonId,
+                decoration: const InputDecoration(
+                  labelText: 'Season',
+                  border: OutlineInputBorder(),
+                ),
+                items: widget.seasons
+                    .map(
+                      (season) => DropdownMenuItem(
+                        value: season.id,
+                        child: Text(season.label),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => seasonId = value),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: title,
               decoration: const InputDecoration(
@@ -1040,6 +1207,7 @@ class _EpisodeEditorState extends State<_EpisodeEditor> {
             'series_id': widget.seriesId,
             'episode_number': int.parse(number.text),
             'title': title.text.trim(),
+            'season_id': seasonId,
             'is_free': free,
             'coin_price': free ? 0 : int.tryParse(coins.text) ?? 5,
           });

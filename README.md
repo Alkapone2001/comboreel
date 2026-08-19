@@ -101,5 +101,6 @@ flutter build web
 - `supabase/migrations`: authoritative database changes
 - `test`: widget and domain model tests
 - `PROJECT_PLAN.md`: living delivery scope and milestone status
+- `docs/ACCESSIBILITY_AUDIT.md`: accessibility findings and release-device checklist
 
 See `supabase/README.md` for database deployment and security guidance.

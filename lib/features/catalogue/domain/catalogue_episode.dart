@@ -8,6 +8,10 @@ class CatalogueEpisode {
     required this.thumbnailUrl,
     required this.isFree,
     required this.coinPrice,
+    this.seasonId,
+    this.seasonNumber,
+    this.seriesTitle,
+    this.synopsis = '',
   });
 
   factory CatalogueEpisode.fromJson(Map<String, dynamic> json) =>
@@ -20,6 +24,10 @@ class CatalogueEpisode {
         thumbnailUrl: json['thumbnail_url'] as String?,
         isFree: json['is_free'] as bool? ?? false,
         coinPrice: json['coin_price'] as int? ?? 5,
+        seasonId: json['season_id'] as String?,
+        seasonNumber: (json['seasons'] as Map?)?['season_number'] as int?,
+        seriesTitle: (json['series'] as Map?)?['title'] as String?,
+        synopsis: json['synopsis'] as String? ?? '',
       );
 
   final String id;
@@ -30,4 +38,8 @@ class CatalogueEpisode {
   final String? thumbnailUrl;
   final bool isFree;
   final int coinPrice;
+  final String? seasonId;
+  final int? seasonNumber;
+  final String? seriesTitle;
+  final String synopsis;
 }

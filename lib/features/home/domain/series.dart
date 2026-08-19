@@ -11,6 +11,11 @@ class DramaSeries {
     this.badge,
     this.episodeId,
     this.positionSeconds = 0,
+    this.synopsis = '',
+    this.releaseYear,
+    this.ageRating,
+    this.originalLanguage = 'en',
+    this.episodeCount = 0,
   });
 
   final String id;
@@ -22,4 +27,9 @@ class DramaSeries {
   final String? badge;
   final String? episodeId;
   final int positionSeconds;
+  final String synopsis;
+  final int? releaseYear;
+  final String? ageRating;
+  final String originalLanguage;
+  final int episodeCount;
 }

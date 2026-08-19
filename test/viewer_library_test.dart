@@ -50,7 +50,7 @@ void main() {
     await tester.pumpWidget(ComboReelApp(services: services));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('My List'));
+    await tester.tap(find.text('View details'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Add to My List'));
     await tester.pumpAndSettle();

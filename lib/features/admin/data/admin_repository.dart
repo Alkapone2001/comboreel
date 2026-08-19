@@ -5,6 +5,8 @@ abstract interface class AdminRepository {
   Future<List<AdminSeries>> series();
   Future<AdminSeries> saveSeries(Map<String, dynamic> values, {String? id});
   Future<List<AdminEpisode>> episodes(String seriesId);
+  Future<List<AdminSeason>> seasons(String seriesId);
+  Future<AdminSeason> saveSeason(Map<String, dynamic> values, {String? id});
   Future<AdminEpisode> saveEpisode(Map<String, dynamic> values, {String? id});
   Future<void> setSeriesPublished(String id, bool published);
   Future<void> setEpisodePublished(String id, bool published);
@@ -26,6 +28,13 @@ class UnavailableAdminRepository implements AdminRepository {
   }) async => _unavailable();
   @override
   Future<List<AdminEpisode>> episodes(String seriesId) async => _unavailable();
+  @override
+  Future<List<AdminSeason>> seasons(String seriesId) async => _unavailable();
+  @override
+  Future<AdminSeason> saveSeason(
+    Map<String, dynamic> values, {
+    String? id,
+  }) async => _unavailable();
   @override
   Future<AdminEpisode> saveEpisode(
     Map<String, dynamic> values, {

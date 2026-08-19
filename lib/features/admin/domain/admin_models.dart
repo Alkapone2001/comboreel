@@ -50,6 +50,7 @@ class AdminEpisode {
     required this.isFree,
     required this.coinPrice,
     this.streamUid,
+    this.seasonId,
   });
 
   final String id;
@@ -61,6 +62,7 @@ class AdminEpisode {
   final bool isFree;
   final int coinPrice;
   final String? streamUid;
+  final String? seasonId;
 
   factory AdminEpisode.fromJson(Map<String, dynamic> json) => AdminEpisode(
     id: json['id'] as String,
@@ -72,6 +74,31 @@ class AdminEpisode {
     isFree: json['is_free'] as bool? ?? false,
     coinPrice: json['coin_price'] as int? ?? 5,
     streamUid: json['stream_uid'] as String?,
+    seasonId: json['season_id'] as String?,
+  );
+}
+
+class AdminSeason {
+  const AdminSeason({
+    required this.id,
+    required this.seriesId,
+    required this.number,
+    this.title,
+  });
+  final String id;
+  final String seriesId;
+  final int number;
+  final String? title;
+
+  String get label => title?.trim().isNotEmpty == true
+      ? 'Season $number · $title'
+      : 'Season $number';
+
+  factory AdminSeason.fromJson(Map<String, dynamic> json) => AdminSeason(
+    id: json['id'] as String,
+    seriesId: json['series_id'] as String,
+    number: json['season_number'] as int,
+    title: json['title'] as String?,
   );
 }
 
