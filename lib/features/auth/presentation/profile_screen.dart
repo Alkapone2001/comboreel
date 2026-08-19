@@ -10,6 +10,7 @@ import '../../admin/domain/admin_models.dart';
 import '../../analytics/data/analytics_repository.dart';
 import '../../notifications/data/push_notification_service.dart';
 import '../../privacy/data/privacy_repository.dart';
+import '../../privacy/data/subscription_management_service.dart';
 import '../../privacy/presentation/legal_document_screen.dart';
 import '../../privacy/presentation/privacy_center_screen.dart';
 import '../../preferences/data/viewer_preferences_repository.dart';
@@ -30,6 +31,8 @@ class ProfileScreen extends StatelessWidget {
     this.analyticsRepository = const NoopAnalyticsRepository(),
     this.pushNotificationService = const UnavailablePushNotificationService(),
     this.privacyRepository = const UnavailablePrivacyRepository(),
+    this.subscriptionManagementService =
+        const UnavailableSubscriptionManagementService(),
     this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
     this.accountSecurityRepository =
         const UnavailableAccountSecurityRepository(),
@@ -46,6 +49,7 @@ class ProfileScreen extends StatelessWidget {
   final AnalyticsRepository analyticsRepository;
   final PushNotificationService pushNotificationService;
   final PrivacyRepository privacyRepository;
+  final SubscriptionManagementService subscriptionManagementService;
   final ViewerPreferencesRepository preferencesRepository;
   final AccountSecurityRepository accountSecurityRepository;
   final AccountProfileRepository accountProfileRepository;
@@ -73,6 +77,7 @@ class ProfileScreen extends StatelessWidget {
               analyticsRepository: analyticsRepository,
               pushNotificationService: pushNotificationService,
               privacyRepository: privacyRepository,
+              subscriptionManagementService: subscriptionManagementService,
               preferencesRepository: preferencesRepository,
               onOpenWatchHistory: onOpenWatchHistory,
               onOpenPremium: onOpenPremium,
@@ -484,6 +489,7 @@ class _SignedInProfile extends StatelessWidget {
     required this.analyticsRepository,
     required this.pushNotificationService,
     required this.privacyRepository,
+    required this.subscriptionManagementService,
     required this.preferencesRepository,
     required this.onOpenWatchHistory,
     required this.onOpenPremium,
@@ -498,6 +504,7 @@ class _SignedInProfile extends StatelessWidget {
   final AnalyticsRepository analyticsRepository;
   final PushNotificationService pushNotificationService;
   final PrivacyRepository privacyRepository;
+  final SubscriptionManagementService subscriptionManagementService;
   final ViewerPreferencesRepository preferencesRepository;
   final VoidCallback onOpenWatchHistory;
   final VoidCallback onOpenPremium;
@@ -566,8 +573,10 @@ class _SignedInProfile extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute<void>(
-              builder: (_) =>
-                  PrivacyCenterScreen(repository: privacyRepository),
+              builder: (_) => PrivacyCenterScreen(
+                repository: privacyRepository,
+                subscriptionManagementService: subscriptionManagementService,
+              ),
             ),
           ),
         ),

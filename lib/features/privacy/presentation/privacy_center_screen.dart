@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/privacy_repository.dart';
+import '../data/subscription_management_service.dart';
 import 'legal_document_screen.dart';
 
 class PrivacyCenterScreen extends StatefulWidget {
-  const PrivacyCenterScreen({super.key, required this.repository});
+  const PrivacyCenterScreen({
+    super.key,
+    required this.repository,
+    this.subscriptionManagementService =
+        const UnavailableSubscriptionManagementService(),
+  });
   final PrivacyRepository repository;
+  final SubscriptionManagementService subscriptionManagementService;
   @override
   State<PrivacyCenterScreen> createState() => _PrivacyCenterScreenState();
 }
@@ -57,8 +64,31 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
                   if (preview.activePlatforms.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     Text(
-                      'Active subscription detected: ${preview.activePlatforms.join(', ')}. Apple/Google subscriptions must be cancelled in that store; account deletion does not cancel them.',
+                      'Active subscription detected: ${preview.activePlatforms.join(', ')}. Account deletion does not cancel provider billing.',
                     ),
+                    for (final platform in preview.activePlatforms)
+                      if (widget.subscriptionManagementService.supports(
+                        platform,
+                      ))
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              try {
+                                await widget.subscriptionManagementService
+                                    .manage(platform);
+                              } catch (error) {
+                                if (context.mounted) _showError(error);
+                              }
+                            },
+                            icon: const Icon(Icons.open_in_new, size: 18),
+                            label: Text(
+                              widget.subscriptionManagementService.labelFor(
+                                platform,
+                              ),
+                            ),
+                          ),
+                        ),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: acknowledged,

@@ -279,6 +279,8 @@ class _AppShellState extends State<AppShell> {
         analyticsRepository: widget.services.analyticsRepository,
         pushNotificationService: widget.services.pushNotificationService,
         privacyRepository: widget.services.privacyRepository,
+        subscriptionManagementService:
+            widget.services.subscriptionManagementService,
         preferencesRepository: widget.services.viewerPreferencesRepository,
         accountSecurityRepository: widget.services.accountSecurityRepository,
         accountProfileRepository: widget.services.accountProfileRepository,

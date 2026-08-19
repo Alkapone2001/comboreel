@@ -20,6 +20,8 @@ Environment variables (public configuration):
 | `FIREBASE_PROJECT_ID` | Firebase project ID |
 | `CLOUDFLARE_PAGES_PROJECT` | Existing Pages project name |
 | `PUBLIC_APP_URL` | Canonical staging HTTPS origin used in shared links |
+| `APPLE_SUBSCRIPTION_MANAGEMENT_URL` | HTTPS App Store subscription-management page; use Apple's account URL unless a storefront-specific approved URL is required |
+| `GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL` | HTTPS Play subscription-management page; may include the production package name |
 
 Environment secrets:
 
@@ -58,6 +60,9 @@ deploying `build/web`. `_headers` and `_redirects` are included in the artifact.
    Email Templates, enable password/email-change security notifications, and
    configure production SMTP. Disable provider link tracking because rewritten
    confirmation URLs can invalidate Supabase Auth actions.
+9. Configure and test the Apple/Google subscription-management URLs. Stripe uses
+   the authenticated `stripe-checkout` portal action and must not be replaced by
+   a static customer URL.
 
 Database migrations are forward-only. Before production migration, take a
 provider backup/PITR checkpoint, review lock/runtime impact, and rehearse on a

@@ -10,6 +10,10 @@ class AppConfig {
     this.firebaseProjectId = '',
     this.firebaseWebVapidKey = '',
     this.publicAppUrl = '',
+    this.appleSubscriptionManagementUrl =
+        'https://apps.apple.com/account/subscriptions',
+    this.googlePlaySubscriptionManagementUrl =
+        'https://play.google.com/store/account/subscriptions',
   });
 
   factory AppConfig.fromEnvironment() => const AppConfig(
@@ -29,6 +33,14 @@ class AppConfig {
     firebaseProjectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
     firebaseWebVapidKey: String.fromEnvironment('FIREBASE_WEB_VAPID_KEY'),
     publicAppUrl: String.fromEnvironment('PUBLIC_APP_URL'),
+    appleSubscriptionManagementUrl: String.fromEnvironment(
+      'APPLE_SUBSCRIPTION_MANAGEMENT_URL',
+      defaultValue: 'https://apps.apple.com/account/subscriptions',
+    ),
+    googlePlaySubscriptionManagementUrl: String.fromEnvironment(
+      'GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL',
+      defaultValue: 'https://play.google.com/store/account/subscriptions',
+    ),
   );
 
   final String supabaseUrl;
@@ -41,6 +53,8 @@ class AppConfig {
   final String firebaseProjectId;
   final String firebaseWebVapidKey;
   final String publicAppUrl;
+  final String appleSubscriptionManagementUrl;
+  final String googlePlaySubscriptionManagementUrl;
 
   bool get hasSupabase =>
       supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;

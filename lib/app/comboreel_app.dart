@@ -32,6 +32,7 @@ class ComboReelApp extends StatelessWidget {
         '/delete-account' => AccountDeletionEntryScreen(
           authRepository: services.authRepository,
           privacyRepository: services.privacyRepository,
+          subscriptionManagementService: services.subscriptionManagementService,
           backendConfigured: services.backendConfigured,
         ),
         _ => AppShell(services: services),

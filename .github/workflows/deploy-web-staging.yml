@@ -47,6 +47,8 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           FIREBASE_WEB_VAPID_KEY: ${{ secrets.FIREBASE_WEB_VAPID_KEY }}
           PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
+          APPLE_SUBSCRIPTION_MANAGEMENT_URL: ${{ vars.APPLE_SUBSCRIPTION_MANAGEMENT_URL }}
+          GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL: ${{ vars.GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL }}
         run: >-
           flutter build web --release
           --dart-define=SUPABASE_URL="$SUPABASE_URL"
@@ -57,6 +59,8 @@ jobs:
           --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID"
           --dart-define=FIREBASE_WEB_VAPID_KEY="$FIREBASE_WEB_VAPID_KEY"
           --dart-define=PUBLIC_APP_URL="$PUBLIC_APP_URL"
+          --dart-define=APPLE_SUBSCRIPTION_MANAGEMENT_URL="$APPLE_SUBSCRIPTION_MANAGEMENT_URL"
+          --dart-define=GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL="$GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL"
       - name: Audit deployable artifact
         run: dart run tool/release_audit.dart
       - name: Deploy to Cloudflare Pages staging branch

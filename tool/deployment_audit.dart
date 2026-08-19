@@ -51,6 +51,15 @@ void main() {
     deploy.contains('PUBLIC_APP_URL'),
     'Staging deployment must configure canonical HTTPS share links.',
   );
+  for (final variable in [
+    'APPLE_SUBSCRIPTION_MANAGEMENT_URL',
+    'GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL',
+  ]) {
+    require(
+      deploy.contains('--dart-define=$variable='),
+      'Staging deployment must configure $variable.',
+    );
+  }
 
   final databaseContracts = Directory('supabase/tests')
       .listSync()

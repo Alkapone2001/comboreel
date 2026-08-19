@@ -39,6 +39,7 @@ import '../../features/preferences/data/supabase_viewer_preferences_repository.d
 import '../../features/preferences/data/viewer_preferences_repository.dart';
 import '../../features/privacy/data/privacy_repository.dart';
 import '../../features/privacy/data/supabase_privacy_repository.dart';
+import '../../features/privacy/data/subscription_management_service.dart';
 import '../config/app_config.dart';
 import 'content_share_service.dart';
 import 'deep_link_service.dart';
@@ -58,6 +59,8 @@ class AppServices {
     this.storePurchaseService = const UnavailableStorePurchaseService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
     this.privacyRepository = const UnavailablePrivacyRepository(),
+    this.subscriptionManagementService =
+        const UnavailableSubscriptionManagementService(),
     this.deepLinkService = const NoopDeepLinkService(),
     this.contentShareService = const NoopContentShareService(),
     this.viewerPreferencesRepository =
@@ -95,6 +98,7 @@ class AppServices {
   final StorePurchaseService storePurchaseService;
   final PlaybackRepository playbackRepository;
   final PrivacyRepository privacyRepository;
+  final SubscriptionManagementService subscriptionManagementService;
   final DeepLinkService deepLinkService;
   final ContentShareService contentShareService;
   final ViewerPreferencesRepository viewerPreferencesRepository;
@@ -179,6 +183,11 @@ class AppServices {
           : const UnavailableStorePurchaseService(),
       playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),
       privacyRepository: SupabasePrivacyRepository(Supabase.instance.client),
+      subscriptionManagementService: SupabaseSubscriptionManagementService(
+        Supabase.instance.client,
+        appleUrl: config.appleSubscriptionManagementUrl,
+        googlePlayUrl: config.googlePlaySubscriptionManagementUrl,
+      ),
       deepLinkService: deepLinks,
       contentShareService: SystemContentShareService(config.publicAppUrl),
       viewerPreferencesRepository: SupabaseViewerPreferencesRepository(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/auth_user.dart';
 import '../data/privacy_repository.dart';
+import '../data/subscription_management_service.dart';
 import 'privacy_center_screen.dart';
 
 class AccountDeletionEntryScreen extends StatelessWidget {
@@ -11,11 +12,14 @@ class AccountDeletionEntryScreen extends StatelessWidget {
     required this.authRepository,
     required this.privacyRepository,
     required this.backendConfigured,
+    this.subscriptionManagementService =
+        const UnavailableSubscriptionManagementService(),
   });
 
   final AuthRepository authRepository;
   final PrivacyRepository privacyRepository;
   final bool backendConfigured;
+  final SubscriptionManagementService subscriptionManagementService;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +41,10 @@ class AccountDeletionEntryScreen extends StatelessWidget {
       stream: authRepository.authStateChanges,
       builder: (context, snapshot) => snapshot.data == null
           ? _DeletionSignIn(repository: authRepository)
-          : PrivacyCenterScreen(repository: privacyRepository),
+          : PrivacyCenterScreen(
+              repository: privacyRepository,
+              subscriptionManagementService: subscriptionManagementService,
+            ),
     );
   }
 }

@@ -37,6 +37,11 @@ flutter run -d chrome `
 Never add secret keys, service-role keys, payment secrets, or webhook secrets to Dart source, build arguments used in public logs, or committed files.
 
 Set the public canonical origin with `--dart-define=PUBLIC_APP_URL=https://...`.
+Apple and Google subscription-management pages default to their official HTTPS
+account URLs. Release builds may override them with
+`APPLE_SUBSCRIPTION_MANAGEMENT_URL` and
+`GOOGLE_PLAY_SUBSCRIPTION_MANAGEMENT_URL`; insecure or malformed values are
+disabled instead of being opened.
 Share sheets use that HTTPS origin and embed a validated `comboreel://` destination;
 native builds register the custom scheme for cold and warm deep links.
 

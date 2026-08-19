@@ -18,8 +18,10 @@ deletion.
   and Netlify; other hosts must rewrite those routes to `index.html`. Google Play
   requires the functional external deletion resource in addition to the in-app
   flow.
-- Configure Apple and Google subscription-management links in release UX and
-  verify cancellation wording with sandbox purchases.
+- [x] Add safe Apple and Google subscription-management links to the release UX,
+  plus an authenticated Stripe Billing Portal action.
+- Configure production URL overrides where needed and verify cancellation wording
+  and redirect behavior with Apple, Google, and Stripe sandbox subscriptions.
 - Deploy `account-data` with gateway JWT verification enabled. Confirm
   `SUPABASE_SERVICE_ROLE_KEY` is platform-managed and `STRIPE_SECRET_KEY` exists
   only where Stripe billing is enabled.
