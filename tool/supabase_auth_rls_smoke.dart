@@ -22,6 +22,23 @@ Future<void> main() async {
     'Viewer B',
   );
 
+  await _request(
+    'POST',
+    Uri.parse('$apiUrl/auth/v1/recover'),
+    apiKey: anonKey,
+    body: {'email': first.email},
+    expectedStatus: 200,
+    description: 'existing account can request password recovery',
+  );
+  await _request(
+    'POST',
+    Uri.parse('$apiUrl/auth/v1/recover'),
+    apiKey: anonKey,
+    body: {'email': 'missing-$runId@comboreel.local'},
+    expectedStatus: 200,
+    description: 'recovery does not reveal missing accounts',
+  );
+
   await _expectRows(
     apiUrl,
     anonKey,
@@ -162,7 +179,7 @@ Future<void> main() async {
     description: 'signup records privacy and terms consent',
   );
 
-  stdout.writeln('Local Supabase Auth/RLS smoke test passed (13 checks).');
+  stdout.writeln('Local Supabase Auth/RLS smoke test passed (15 checks).');
 }
 
 Future<_Session> _signUp(
@@ -194,7 +211,7 @@ Future<_Session> _signUp(
   if (token == null || id == null) {
     throw StateError('Signup did not return an authenticated session.');
   }
-  return _Session(id, token);
+  return _Session(id, email, token);
 }
 
 Future<void> _expectRows(
@@ -260,7 +277,8 @@ String _requiredEnvironment(String name) {
 }
 
 class _Session {
-  const _Session(this.id, this.token);
+  const _Session(this.id, this.email, this.token);
   final String id;
+  final String email;
   final String token;
 }

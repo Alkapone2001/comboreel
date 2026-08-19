@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/services/app_services.dart';
 import '../features/auth/presentation/profile_screen.dart';
+import '../features/auth/presentation/update_password_screen.dart';
 import '../features/admin/presentation/admin_dashboard_screen.dart';
 import '../features/discover/presentation/discover_screen.dart';
 import '../features/catalogue/domain/catalogue_episode.dart';
@@ -28,6 +29,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
   final List<StreamSubscription<Uri>> _deepLinkSubscriptions = [];
+  StreamSubscription<void>? _passwordRecoverySubscription;
 
   @override
   void initState() {
@@ -38,6 +40,11 @@ class _AppShellState extends State<AppShell> {
         widget.services.pushNotificationService.deepLinks.listen(_openDeepLink),
       )
       ..add(widget.services.deepLinkService.links.listen(_openDeepLink));
+    _passwordRecoverySubscription = widget
+        .services
+        .accountSecurityRepository
+        .passwordRecoveryRequests
+        .listen((_) => _openPasswordRecovery());
     final initialDeepLink = Uri.tryParse(
       Uri.base.queryParameters['deep_link'] ?? '',
     );
@@ -46,6 +53,18 @@ class _AppShellState extends State<AppShell> {
         (_) => _openDeepLink(initialDeepLink),
       );
     }
+  }
+
+  void _openPasswordRecovery() {
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => UpdatePasswordScreen(
+          repository: widget.services.accountSecurityRepository,
+          recovery: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _openDeepLink(Uri uri) async {
@@ -108,6 +127,10 @@ class _AppShellState extends State<AppShell> {
   void dispose() {
     for (final subscription in _deepLinkSubscriptions) {
       unawaited(subscription.cancel());
+    }
+    final passwordRecoverySubscription = _passwordRecoverySubscription;
+    if (passwordRecoverySubscription != null) {
+      unawaited(passwordRecoverySubscription.cancel());
     }
     super.dispose();
   }
@@ -257,6 +280,7 @@ class _AppShellState extends State<AppShell> {
         pushNotificationService: widget.services.pushNotificationService,
         privacyRepository: widget.services.privacyRepository,
         preferencesRepository: widget.services.viewerPreferencesRepository,
+        accountSecurityRepository: widget.services.accountSecurityRepository,
       ),
     ];
 

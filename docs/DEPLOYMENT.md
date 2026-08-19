@@ -68,8 +68,9 @@ After deployment, record the commit SHA and verify:
   with security headers and no mixed content.
 - A shared HTTPS episode link opens the matching story on web; `comboreel://home`,
   `comboreel://series/{id}`, and episode links open the installed iOS/Android app.
-- Create and confirm an account; verify legal-consent rows, sign-in, sign-out, and
-  password reauthentication.
+- Create and confirm an account; verify legal-consent rows, sign-in, sign-out,
+  non-enumerating password-reset email delivery/deep links, new-password update,
+  and password reauthentication.
 - Load catalogue artwork, a signed HLS stream, subtitles, progress, favourites,
   search, seasons, and the next-episode transition.
 - Verify a coin purchase/unlock replay, rewarded-ad SSV, premium purchase/restore,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../data/account_security_repository.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_user.dart';
 import '../../admin/data/admin_repository.dart';
@@ -12,6 +13,7 @@ import '../../privacy/presentation/legal_document_screen.dart';
 import '../../privacy/presentation/privacy_center_screen.dart';
 import '../../preferences/data/viewer_preferences_repository.dart';
 import '../../preferences/presentation/playback_preferences_screen.dart';
+import 'update_password_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -27,6 +29,8 @@ class ProfileScreen extends StatelessWidget {
     this.pushNotificationService = const UnavailablePushNotificationService(),
     this.privacyRepository = const UnavailablePrivacyRepository(),
     this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
+    this.accountSecurityRepository =
+        const UnavailableAccountSecurityRepository(),
   });
 
   final AuthRepository authRepository;
@@ -40,6 +44,7 @@ class ProfileScreen extends StatelessWidget {
   final PushNotificationService pushNotificationService;
   final PrivacyRepository privacyRepository;
   final ViewerPreferencesRepository preferencesRepository;
+  final AccountSecurityRepository accountSecurityRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +55,10 @@ class ProfileScreen extends StatelessWidget {
       initialData: authRepository.currentUser,
       stream: authRepository.authStateChanges,
       builder: (context, snapshot) => snapshot.data == null
-          ? _AuthenticationView(repository: authRepository)
+          ? _AuthenticationView(
+              repository: authRepository,
+              securityRepository: accountSecurityRepository,
+            )
           : _SignedInProfile(
               user: snapshot.data!,
               repository: authRepository,
@@ -63,6 +71,7 @@ class ProfileScreen extends StatelessWidget {
               preferencesRepository: preferencesRepository,
               onOpenWatchHistory: onOpenWatchHistory,
               onOpenPremium: onOpenPremium,
+              accountSecurityRepository: accountSecurityRepository,
             ),
     );
   }
@@ -139,8 +148,12 @@ class _BackendSetupView extends StatelessWidget {
 }
 
 class _AuthenticationView extends StatefulWidget {
-  const _AuthenticationView({required this.repository});
+  const _AuthenticationView({
+    required this.repository,
+    required this.securityRepository,
+  });
   final AuthRepository repository;
+  final AccountSecurityRepository securityRepository;
 
   @override
   State<_AuthenticationView> createState() => _AuthenticationViewState();
@@ -156,6 +169,54 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
   bool _obscurePassword = true;
   bool _acceptedLegal = false;
   String? _error;
+
+  Future<void> _requestPasswordReset() async {
+    var resetEmail = _email.text.trim();
+    final submittedEmail = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset password'),
+        content: TextField(
+          onChanged: (value) => resetEmail = value.trim(),
+          autofocus: true,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          autofillHints: const [AutofillHints.email],
+          decoration: const InputDecoration(
+            labelText: 'Account email',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, resetEmail),
+            child: const Text('Send reset link'),
+          ),
+        ],
+      ),
+    );
+    if (submittedEmail == null || !submittedEmail.contains('@') || !mounted) {
+      return;
+    }
+    try {
+      await widget.securityRepository.requestPasswordReset(submittedEmail);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'If an account exists for that email, a reset link is on its way.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = _friendlyError(error));
+    }
+  }
 
   @override
   void dispose() {
@@ -354,6 +415,11 @@ class _AuthenticationViewState extends State<_AuthenticationView> {
                         )
                       : Text(_createAccount ? 'Create account' : 'Sign in'),
                 ),
+                if (!_createAccount)
+                  TextButton(
+                    onPressed: _submitting ? null : _requestPasswordReset,
+                    child: const Text('Forgot password?'),
+                  ),
                 TextButton(
                   onPressed: _submitting
                       ? null
@@ -386,6 +452,7 @@ class _SignedInProfile extends StatelessWidget {
     required this.preferencesRepository,
     required this.onOpenWatchHistory,
     required this.onOpenPremium,
+    required this.accountSecurityRepository,
   });
   final AuthUser user;
   final AuthRepository repository;
@@ -398,6 +465,7 @@ class _SignedInProfile extends StatelessWidget {
   final ViewerPreferencesRepository preferencesRepository;
   final VoidCallback onOpenWatchHistory;
   final VoidCallback onOpenPremium;
+  final AccountSecurityRepository accountSecurityRepository;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -452,6 +520,17 @@ class _SignedInProfile extends StatelessWidget {
             MaterialPageRoute<void>(
               builder: (_) =>
                   PrivacyCenterScreen(repository: privacyRepository),
+            ),
+          ),
+        ),
+        _ProfileTile(
+          icon: Icons.password_rounded,
+          title: 'Change password',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  UpdatePasswordScreen(repository: accountSecurityRepository),
             ),
           ),
         ),
