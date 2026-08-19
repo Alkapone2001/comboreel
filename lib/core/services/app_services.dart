@@ -18,6 +18,7 @@ import '../../features/monetization/data/offline_monetization_repository.dart';
 import '../../features/monetization/data/rewarded_ad_service.dart';
 import '../../features/monetization/data/supabase_monetization_repository.dart';
 import '../../features/monetization/data/store_purchase_service.dart';
+import '../../features/monetization/data/stripe_checkout_purchase_service.dart';
 import '../../features/player/data/offline_playback_repository.dart';
 import '../../features/player/data/playback_repository.dart';
 import '../../features/player/data/supabase_playback_repository.dart';
@@ -90,10 +91,10 @@ class AppServices {
         androidAdUnitId: config.admobAndroidRewardedAdUnitId,
         iosAdUnitId: config.admobIosRewardedAdUnitId,
       ),
-      storePurchaseService:
-          !kIsWeb &&
-              (defaultTargetPlatform == TargetPlatform.android ||
-                  defaultTargetPlatform == TargetPlatform.iOS)
+      storePurchaseService: kIsWeb
+          ? StripeCheckoutPurchaseService(Supabase.instance.client)
+          : (defaultTargetPlatform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.iOS)
           ? NativeStorePurchaseService()
           : const UnavailableStorePurchaseService(),
       playbackRepository: SupabasePlaybackRepository(Supabase.instance.client),

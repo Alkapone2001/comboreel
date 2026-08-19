@@ -11,6 +11,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - A Cloudflare Stream account and deployed playback Edge Function for live video
 - An AdMob account and deployed rewarded SSV callback for production ad unlocks
 - App Store Connect and Google Play products plus server API credentials for mobile purchases
+- Stripe products, Checkout, webhook, and Billing Portal configuration for web purchases
 
 ## Run the UI prototype
 
@@ -43,6 +44,11 @@ Mobile store product IDs are defined in the database migration and native client
 products in App Store Connect and Play Console before device testing. Store
 callbacks are not trusted; `verify-mobile-purchase` must accept a transaction
 before Flutter completes it.
+
+Configured web builds use Stripe-hosted Checkout and the Billing Portal. Create
+matching Stripe Products and Prices, supply their IDs through `STRIPE_PRICE_MAP`,
+and register the public `stripe-webhook` URL for the documented event list. Coin
+or premium value is granted only by the signature-verified webhook.
 
 ## Verify
 

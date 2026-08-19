@@ -53,6 +53,8 @@ class DemoStorePurchaseService implements StorePurchaseService {
   @override
   bool get isSupported => true;
   @override
+  String get recoveryActionLabel => 'Restore Purchases';
+  @override
   Stream<StorePurchaseUpdate> get updates => _updates.stream;
   @override
   Future<List<StoreProduct>> loadProducts() async => _products;

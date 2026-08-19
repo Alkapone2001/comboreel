@@ -68,3 +68,16 @@ expiry. A transaction tied to a different viewer or product is rejected. Flutter
 finishes or consumes the store transaction only after server acceptance. Restore
 Purchases replays owned non-consumables/subscriptions through the same verifier;
 consumable balances are restored from ComboReel's server ledger, not the store.
+
+## Stripe web billing
+
+Configured web builds load products through the authenticated `stripe-checkout`
+function. Stripe secrets and Price IDs remain server-side. Checkout uses hosted
+payment pages; its client redirect never grants value. The raw-body webhook
+validates Stripe's timestamped HMAC before an atomic RPC credits coins or updates
+a premium entitlement.
+
+Stripe event IDs and Checkout Session IDs are separate idempotency boundaries.
+Customer IDs have one immutable ComboReel owner. Subscription lifecycle and
+invoice events reconcile access while the app is closed. Billing Portal sessions
+are created for the authenticated viewer without accepting a client customer ID.

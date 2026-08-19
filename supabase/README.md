@@ -39,6 +39,11 @@ fulfillment. Deploy `functions/verify-mobile-purchase` with JWT verification and
 the documented least-privilege Apple/Google credentials. Never grant purchases
 from Flutter's purchase callback alone.
 
+`202608190005_stripe_web.sql` adds one-to-one Stripe customer ownership,
+webhook idempotency, web coin fulfillment, and subscription reconciliation.
+Deploy `stripe-checkout` with JWT verification and `stripe-webhook` without it;
+the webhook authenticates Stripe against the raw request body and signing secret.
+
 ## Private video playback
 
 Deploy `functions/playback-session` after setting its documented secrets. Mark every licensed Stream video `requireSignedURLs: true`. The function authorizes the episode before requesting a temporary token; clients never receive the Cloudflare API token or service-role key.

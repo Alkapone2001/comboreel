@@ -181,4 +181,63 @@ begin
 end;
 $$;
 
+select public.register_stripe_customer_server(
+  '11111111-1111-1111-1111-111111111111', 'cus_contract_0001'
+);
+select * from public.fulfill_stripe_checkout_server(
+  'evt_checkout_coin_0001', '11111111-1111-1111-1111-111111111111',
+  'cs_contract_coin_0001', 'cus_contract_0001', null,
+  'comboreel.coins.120', now(), null, 'paid'
+);
+select * from public.fulfill_stripe_checkout_server(
+  'evt_checkout_coin_0001', '11111111-1111-1111-1111-111111111111',
+  'cs_contract_coin_0001', 'cus_contract_0001', null,
+  'comboreel.coins.120', now(), null, 'paid'
+);
+select * from public.fulfill_stripe_checkout_server(
+  'evt_checkout_sub_0001', '11111111-1111-1111-1111-111111111111',
+  'cs_contract_sub_0001', 'cus_contract_0001', 'sub_contract_0001',
+  'comboreel.premium.monthly', now(), now() + interval '30 days', 'active'
+);
+select public.reconcile_stripe_subscription_server(
+  'evt_sub_cancelled_0001', 'customer.subscription.deleted',
+  'cus_contract_0001', 'sub_contract_0001',
+  'comboreel.premium.monthly', 'canceled', now() - interval '30 days', now()
+);
+select public.reconcile_stripe_subscription_server(
+  'evt_sub_cancelled_0001', 'customer.subscription.deleted',
+  'cus_contract_0001', 'sub_contract_0001',
+  'comboreel.premium.monthly', 'canceled', now() - interval '30 days', now()
+);
+
+do $$
+declare
+  v_balance integer;
+  v_ledger_count integer;
+  v_event_count integer;
+  v_status public.subscription_status;
+begin
+  select balance into v_balance from public.wallets
+  where user_id = '11111111-1111-1111-1111-111111111111';
+  if v_balance <> 175 then
+    raise exception 'expected post-Stripe balance 175, got %', v_balance;
+  end if;
+  select count(*) into v_ledger_count from public.coin_transactions
+  where user_id = '11111111-1111-1111-1111-111111111111'
+    and reason = 'purchase' and reference_id = 'stripe:cs_contract_coin_0001';
+  if v_ledger_count <> 1 then
+    raise exception 'expected one Stripe credit, got %', v_ledger_count;
+  end if;
+  select count(*) into v_event_count from public.stripe_webhook_events;
+  if v_event_count <> 3 then
+    raise exception 'expected three unique Stripe events, got %', v_event_count;
+  end if;
+  select status into v_status from public.subscriptions
+  where platform = 'stripe' and external_subscription_id = 'sub_contract_0001';
+  if v_status <> 'cancelled' then
+    raise exception 'expected cancelled Stripe subscription, got %', v_status;
+  end if;
+end;
+$$;
+
 rollback;

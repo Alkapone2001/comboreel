@@ -33,8 +33,38 @@ class _CoinsScreenState extends State<CoinsScreen> {
   void initState() {
     super.initState();
     _reload();
-    _products = widget.store.loadProducts();
+    _loadProducts();
     _purchaseSubscription = widget.store.updates.listen(_handlePurchase);
+    final checkout = Uri.base.queryParameters['checkout'];
+    if (checkout != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              checkout == 'success'
+                  ? 'Payment received. Your balance will update after verification.'
+                  : 'Checkout was cancelled.',
+            ),
+          ),
+        );
+      });
+      if (checkout == 'success') {
+        Future<void>.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(_reload);
+        });
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CoinsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewerId != widget.viewerId ||
+        oldWidget.store != widget.store) {
+      _reload();
+      _loadProducts();
+    }
   }
 
   @override
@@ -48,6 +78,12 @@ class _CoinsScreenState extends State<CoinsScreen> {
     _wallet = id == null
         ? Future.value(const WalletSnapshot(balance: 0, transactions: []))
         : widget.repository.wallet(id);
+  }
+
+  void _loadProducts() {
+    _products = widget.viewerId == null
+        ? Future.value(const <StoreProduct>[])
+        : widget.store.loadProducts();
   }
 
   Future<void> _handlePurchase(StorePurchaseUpdate purchase) async {
@@ -268,7 +304,7 @@ class _CoinsScreenState extends State<CoinsScreen> {
                           alignment: Alignment.center,
                           child: TextButton(
                             onPressed: _restore,
-                            child: const Text('Restore Purchases'),
+                            child: Text(widget.store.recoveryActionLabel),
                           ),
                         ),
                       ],

@@ -35,6 +35,9 @@ class NativeStorePurchaseService implements StorePurchaseService {
           defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
+  String get recoveryActionLabel => 'Restore Purchases';
+
+  @override
   Stream<StorePurchaseUpdate> get updates => _controller.stream;
 
   @override

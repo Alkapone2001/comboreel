@@ -2,6 +2,7 @@ import '../domain/store_purchase.dart';
 
 abstract interface class StorePurchaseService {
   bool get isSupported;
+  String get recoveryActionLabel;
   Stream<StorePurchaseUpdate> get updates;
 
   Future<List<StoreProduct>> loadProducts();
@@ -15,6 +16,8 @@ class UnavailableStorePurchaseService implements StorePurchaseService {
 
   @override
   bool get isSupported => false;
+  @override
+  String get recoveryActionLabel => 'Restore Purchases';
   @override
   Stream<StorePurchaseUpdate> get updates => const Stream.empty();
   @override
