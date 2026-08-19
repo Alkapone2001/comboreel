@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/services/app_services.dart';
@@ -23,12 +25,52 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
+  StreamSubscription<Uri>? _deepLinkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(widget.services.analyticsRepository.track('app_opened'));
+    _deepLinkSubscription = widget.services.pushNotificationService.deepLinks
+        .listen(_openDeepLink);
+    final initialDeepLink = Uri.tryParse(
+      Uri.base.queryParameters['deep_link'] ?? '',
+    );
+    if (initialDeepLink != null && initialDeepLink.scheme == 'comboreel') {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _openDeepLink(initialDeepLink),
+      );
+    }
+  }
+
+  void _openDeepLink(Uri uri) {
+    if (!mounted) return;
+    const destinations = {'home': 0, 'discover': 1, 'coins': 2, 'profile': 3};
+    final destination = uri.host.isNotEmpty
+        ? uri.host
+        : uri.pathSegments.firstOrNull;
+    final index = destinations[destination];
+    if (index != null) setState(() => _selectedIndex = index);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_deepLinkSubscription?.cancel());
+    super.dispose();
+  }
 
   String? get _viewerId =>
       widget.services.authRepository.currentUser?.id ??
       (widget.services.backendConfigured ? null : 'demo-viewer');
 
   void _openSeries(DramaSeries series) {
+    unawaited(
+      widget.services.analyticsRepository.track(
+        'series_opened',
+        seriesId: series.id,
+        properties: const {'source': 'catalogue'},
+      ),
+    );
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SeriesDetailScreen(
@@ -43,12 +85,21 @@ class _AppShellState extends State<AppShell> {
             Navigator.of(context).pop();
             setState(() => _selectedIndex = 2);
           },
+          analyticsRepository: widget.services.analyticsRepository,
         ),
       ),
     );
   }
 
   void _openPlayer(CatalogueEpisode episode, {int positionSeconds = 0}) {
+    unawaited(
+      widget.services.analyticsRepository.track(
+        'playback_started',
+        seriesId: episode.seriesId,
+        episodeId: episode.id,
+        properties: {'position_seconds': positionSeconds},
+      ),
+    );
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => EpisodePlayerScreen(
@@ -91,8 +142,11 @@ class _AppShellState extends State<AppShell> {
   void _openAdmin() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            AdminDashboardScreen(repository: widget.services.adminRepository),
+        builder: (_) => AdminDashboardScreen(
+          repository: widget.services.adminRepository,
+          analyticsRepository: widget.services.analyticsRepository,
+          pushCampaignRepository: widget.services.pushCampaignRepository,
+        ),
       ),
     );
   }
@@ -115,6 +169,7 @@ class _AppShellState extends State<AppShell> {
         repository: widget.services.monetizationRepository,
         store: widget.services.storePurchaseService,
         viewerId: _viewerId,
+        analyticsRepository: widget.services.analyticsRepository,
       ),
       ProfileScreen(
         authRepository: widget.services.authRepository,
@@ -122,6 +177,8 @@ class _AppShellState extends State<AppShell> {
         onOpenMyList: _openMyList,
         adminRepository: widget.services.adminRepository,
         onOpenAdmin: _openAdmin,
+        analyticsRepository: widget.services.analyticsRepository,
+        pushNotificationService: widget.services.pushNotificationService,
       ),
     ];
 
@@ -130,8 +187,16 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (value) =>
-            setState(() => _selectedIndex = value),
+        onDestinationSelected: (value) {
+          const destinations = ['home', 'discover', 'coins', 'profile'];
+          unawaited(
+            widget.services.analyticsRepository.track(
+              'navigation_selected',
+              properties: {'destination': destinations[value]},
+            ),
+          );
+          setState(() => _selectedIndex = value);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

@@ -1,6 +1,8 @@
 import 'package:comboreel/features/admin/data/admin_repository.dart';
 import 'package:comboreel/features/admin/domain/admin_models.dart';
 import 'package:comboreel/features/admin/presentation/admin_dashboard_screen.dart';
+import 'package:comboreel/features/analytics/data/analytics_repository.dart';
+import 'package:comboreel/features/analytics/domain/analytics_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +33,58 @@ void main() {
     expect(find.byTooltip('Upload video'), findsOneWidget);
     expect(find.byTooltip('Publish'), findsOneWidget);
   });
+
+  testWidgets('editor opens consented operations analytics', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminDashboardScreen(
+          repository: _FakeAdminRepository(role: AdminRole.editor),
+          analyticsRepository: _FakeAnalyticsRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Operations analytics'));
+    await tester.pumpAndSettle();
+    expect(find.text('Last 30 days'), findsOneWidget);
+    expect(find.text('42'), findsOneWidget);
+    expect(find.text('Active viewers'), findsOneWidget);
+    expect(find.text('Midnight Contract'), findsWidgets);
+  });
+}
+
+class _FakeAnalyticsRepository implements AnalyticsRepository {
+  @override
+  Future<bool> consentEnabled() async => true;
+  @override
+  Future<void> setConsent(bool enabled) async {}
+  @override
+  Future<void> track(
+    String event, {
+    String? seriesId,
+    String? episodeId,
+    Map<String, Object?> properties = const {},
+  }) async {}
+  @override
+  Future<AnalyticsDashboard> dashboard({int days = 30}) async =>
+      const AnalyticsDashboard(
+        days: 30,
+        activeViewers: 42,
+        sessions: 64,
+        seriesOpens: 120,
+        playbackStarts: 90,
+        completions: 70,
+        unlocks: 18,
+        purchases: 6,
+        completionRate: 77.8,
+        topSeries: [
+          TopSeriesMetric(
+            seriesId: 'series-1',
+            title: 'Midnight Contract',
+            opens: 80,
+          ),
+        ],
+      );
 }
 
 class _FakeAdminRepository implements AdminRepository {

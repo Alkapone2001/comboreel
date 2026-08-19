@@ -52,3 +52,11 @@ its provider using the mechanism documented in `functions/README.md`.
 ## Private video playback
 
 Deploy `functions/playback-session` after setting its documented secrets. Mark every licensed Stream video `requireSignedURLs: true`. The function authorizes the episode before requesting a temporary token; clients never receive the Cloudflare API token or service-role key.
+
+## Analytics and push
+
+`202608190008_analytics_push.sql` adds consent flags, allowlisted first-party
+events, protected aggregate reporting, server-owned device registrations, and
+campaign drafts. Run `tests/analytics_push_contract.sql` after migrations.
+Deploy `push-device` and `send-push-campaign` with JWT verification enabled.
+Authenticated clients cannot write device tokens or delivery results directly.

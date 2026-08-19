@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/data/auth_repository.dart';
@@ -6,6 +7,8 @@ import '../../features/auth/data/offline_auth_repository.dart';
 import '../../features/auth/data/supabase_auth_repository.dart';
 import '../../features/admin/data/admin_repository.dart';
 import '../../features/admin/data/supabase_admin_repository.dart';
+import '../../features/analytics/data/analytics_repository.dart';
+import '../../features/analytics/data/supabase_analytics_repository.dart';
 import '../../features/catalogue/data/catalogue_repository.dart';
 import '../../features/catalogue/data/offline_catalogue_repository.dart';
 import '../../features/catalogue/data/supabase_catalogue_repository.dart';
@@ -20,6 +23,10 @@ import '../../features/monetization/data/offline_monetization_repository.dart';
 import '../../features/monetization/data/rewarded_ad_service.dart';
 import '../../features/monetization/data/supabase_monetization_repository.dart';
 import '../../features/monetization/data/store_purchase_service.dart';
+import '../../features/notifications/data/firebase_push_notification_service.dart';
+import '../../features/notifications/data/push_notification_service.dart';
+import '../../features/notifications/data/push_campaign_repository.dart';
+import '../../features/notifications/data/supabase_push_campaign_repository.dart';
 import '../../features/monetization/data/stripe_checkout_purchase_service.dart';
 import '../../features/player/data/offline_playback_repository.dart';
 import '../../features/player/data/playback_repository.dart';
@@ -34,6 +41,9 @@ class AppServices {
     required this.viewerLibraryRepository,
     required this.monetizationRepository,
     this.adminRepository = const UnavailableAdminRepository(),
+    this.analyticsRepository = const NoopAnalyticsRepository(),
+    this.pushNotificationService = const UnavailablePushNotificationService(),
+    this.pushCampaignRepository = const UnavailablePushCampaignRepository(),
     this.rewardedAdService = const UnavailableRewardedAdService(),
     this.storePurchaseService = const UnavailableStorePurchaseService(),
     this.playbackRepository = const OfflinePlaybackRepository(),
@@ -46,6 +56,9 @@ class AppServices {
     viewerLibraryRepository: OfflineViewerLibraryRepository(),
     monetizationRepository: OfflineMonetizationRepository(),
     adminRepository: const UnavailableAdminRepository(),
+    analyticsRepository: const NoopAnalyticsRepository(),
+    pushNotificationService: const UnavailablePushNotificationService(),
+    pushCampaignRepository: const UnavailablePushCampaignRepository(),
     rewardedAdService: const DemoRewardedAdService(),
     storePurchaseService: DemoStorePurchaseService(),
   );
@@ -56,6 +69,9 @@ class AppServices {
   final ViewerLibraryRepository viewerLibraryRepository;
   final MonetizationRepository monetizationRepository;
   final AdminRepository adminRepository;
+  final AnalyticsRepository analyticsRepository;
+  final PushNotificationService pushNotificationService;
+  final PushCampaignRepository pushCampaignRepository;
   final RewardedAdService rewardedAdService;
   final StorePurchaseService storePurchaseService;
   final PlaybackRepository playbackRepository;
@@ -72,6 +88,9 @@ class AppServices {
         viewerLibraryRepository: OfflineViewerLibraryRepository(),
         monetizationRepository: OfflineMonetizationRepository(),
         adminRepository: const UnavailableAdminRepository(),
+        analyticsRepository: const NoopAnalyticsRepository(),
+        pushNotificationService: const UnavailablePushNotificationService(),
+        pushCampaignRepository: const UnavailablePushCampaignRepository(),
         rewardedAdService: const DemoRewardedAdService(),
         storePurchaseService: DemoStorePurchaseService(),
       );
@@ -81,6 +100,24 @@ class AppServices {
       url: config.supabaseUrl,
       publishableKey: config.supabasePublishableKey,
     );
+    PushNotificationService pushNotifications =
+        const UnavailablePushNotificationService();
+    if (config.hasFirebase) {
+      await Firebase.initializeApp(
+        options: FirebaseOptions(
+          apiKey: config.firebaseApiKey,
+          appId: config.firebaseAppId,
+          messagingSenderId: config.firebaseMessagingSenderId,
+          projectId: config.firebaseProjectId,
+        ),
+      );
+      final firebasePush = FirebasePushNotificationService(
+        Supabase.instance.client,
+        config.firebaseWebVapidKey,
+      );
+      await firebasePush.initialize();
+      pushNotifications = firebasePush;
+    }
     return AppServices(
       config: config,
       authRepository: SupabaseAuthRepository(Supabase.instance.client),
@@ -94,6 +131,13 @@ class AppServices {
         Supabase.instance.client,
       ),
       adminRepository: SupabaseAdminRepository(Supabase.instance.client),
+      analyticsRepository: SupabaseAnalyticsRepository(
+        Supabase.instance.client,
+      ),
+      pushNotificationService: pushNotifications,
+      pushCampaignRepository: SupabasePushCampaignRepository(
+        Supabase.instance.client,
+      ),
       rewardedAdService: AdMobRewardedAdService(
         androidAdUnitId: config.admobAndroidRewardedAdUnitId,
         iosAdUnitId: config.admobIosRewardedAdUnitId,

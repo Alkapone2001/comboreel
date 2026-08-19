@@ -4,6 +4,10 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../analytics/data/analytics_repository.dart';
+import '../../analytics/domain/analytics_dashboard.dart';
+import '../../notifications/data/push_campaign_repository.dart';
+import '../../notifications/domain/push_campaign.dart';
 import '../data/admin_repository.dart';
 import '../data/resumable_upload_service.dart';
 import '../domain/admin_models.dart';
@@ -13,10 +17,14 @@ class AdminDashboardScreen extends StatefulWidget {
     super.key,
     required this.repository,
     this.uploadService = const ResumableUploadService(),
+    this.analyticsRepository = const NoopAnalyticsRepository(),
+    this.pushCampaignRepository = const UnavailablePushCampaignRepository(),
   });
 
   final AdminRepository repository;
   final ResumableUploadService uploadService;
+  final AnalyticsRepository analyticsRepository;
+  final PushCampaignRepository pushCampaignRepository;
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
@@ -228,9 +236,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       .first
       .replaceFirst('Bad state: ', '');
 
+  Future<void> _showAnalytics() async {
+    try {
+      final dashboard = await widget.analyticsRepository.dashboard();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _AnalyticsDialog(dashboard: dashboard),
+      );
+    } catch (error) {
+      _showError(error);
+    }
+  }
+
+  Future<void> _showCampaigns() => showDialog<void>(
+    context: context,
+    builder: (_) => _CampaignDialog(repository: widget.pushCampaignRepository),
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Creator Studio')),
+    appBar: AppBar(
+      title: const Text('Creator Studio'),
+      actions: [
+        IconButton(
+          onPressed: _role == AdminRole.viewer ? null : _showAnalytics,
+          icon: const Icon(Icons.insights_outlined),
+          tooltip: 'Operations analytics',
+        ),
+        IconButton(
+          onPressed: _role == AdminRole.viewer ? null : _showCampaigns,
+          icon: const Icon(Icons.campaign_outlined),
+          tooltip: 'Push campaigns',
+        ),
+      ],
+    ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : _role == AdminRole.viewer
@@ -275,6 +315,308 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
           ),
   );
+}
+
+class _CampaignDialog extends StatefulWidget {
+  const _CampaignDialog({required this.repository});
+  final PushCampaignRepository repository;
+  @override
+  State<_CampaignDialog> createState() => _CampaignDialogState();
+}
+
+class _CampaignDialogState extends State<_CampaignDialog> {
+  late Future<List<PushCampaign>> _campaigns;
+  bool _working = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() => _campaigns = widget.repository.campaigns();
+
+  Future<void> _compose() async {
+    final draft = await showDialog<({String title, String body, String link})>(
+      context: context,
+      builder: (_) => const _CampaignComposer(),
+    );
+    if (draft == null) return;
+    setState(() => _working = true);
+    try {
+      await widget.repository.create(
+        title: draft.title,
+        body: draft.body,
+        deepLink: draft.link,
+      );
+      if (mounted) setState(_reload);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _send(PushCampaign campaign) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Send this campaign now?'),
+        content: Text(
+          '“${campaign.title}” will be delivered to every opted-in device. '
+          'A sent campaign cannot be recalled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Send now'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _working = true);
+    try {
+      await widget.repository.send(campaign.id);
+      if (mounted) setState(_reload);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Push campaigns'),
+    content: SizedBox(
+      width: 700,
+      height: 440,
+      child: FutureBuilder<List<PushCampaign>>(
+        future: _campaigns,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text(snapshot.error.toString()));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text('No campaigns yet. Create a draft to begin.'),
+            );
+          }
+          return ListView.separated(
+            itemCount: snapshot.data!.length,
+            separatorBuilder: (_, _) => const Divider(),
+            itemBuilder: (_, index) {
+              final campaign = snapshot.data![index];
+              return ListTile(
+                title: Text(campaign.title),
+                subtitle: Text(
+                  '${campaign.status.toUpperCase()} · '
+                  '${campaign.successCount}/${campaign.targetCount} delivered',
+                ),
+                trailing: campaign.status == 'draft'
+                    ? FilledButton.tonal(
+                        onPressed: _working ? null : () => _send(campaign),
+                        child: const Text('Review & send'),
+                      )
+                    : null,
+              );
+            },
+          );
+        },
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Close'),
+      ),
+      FilledButton.icon(
+        onPressed: _working ? null : _compose,
+        icon: const Icon(Icons.add),
+        label: const Text('New draft'),
+      ),
+    ],
+  );
+}
+
+class _CampaignComposer extends StatefulWidget {
+  const _CampaignComposer();
+  @override
+  State<_CampaignComposer> createState() => _CampaignComposerState();
+}
+
+class _CampaignComposerState extends State<_CampaignComposer> {
+  final _key = GlobalKey<FormState>();
+  final _title = TextEditingController();
+  final _body = TextEditingController();
+  final _link = TextEditingController(text: 'comboreel://home');
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _body.dispose();
+    _link.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('New push campaign'),
+    content: SizedBox(
+      width: 520,
+      child: Form(
+        key: _key,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _title,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                labelText: 'Notification title',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) =>
+                  (value?.trim().isEmpty ?? true) ? 'Enter a title.' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _body,
+              maxLength: 240,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Message',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) =>
+                  (value?.trim().isEmpty ?? true) ? 'Enter a message.' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _link,
+              decoration: const InputDecoration(
+                labelText: 'Deep link',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) => !(value ?? '').startsWith('comboreel://')
+                  ? 'Use a comboreel:// link.'
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (!_key.currentState!.validate()) return;
+          Navigator.pop(context, (
+            title: _title.text.trim(),
+            body: _body.text.trim(),
+            link: _link.text.trim(),
+          ));
+        },
+        child: const Text('Save draft'),
+      ),
+    ],
+  );
+}
+
+class _AnalyticsDialog extends StatelessWidget {
+  const _AnalyticsDialog({required this.dashboard});
+  final AnalyticsDashboard dashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = [
+      ('Active viewers', dashboard.activeViewers.toString()),
+      ('Sessions', dashboard.sessions.toString()),
+      ('Series opens', dashboard.seriesOpens.toString()),
+      ('Playback starts', dashboard.playbackStarts.toString()),
+      ('Completed', dashboard.completions.toString()),
+      ('Completion rate', '${dashboard.completionRate.toStringAsFixed(1)}%'),
+      ('Unlocks', dashboard.unlocks.toString()),
+      ('Purchases', dashboard.purchases.toString()),
+    ];
+    return AlertDialog(
+      title: Text('Last ${dashboard.days} days'),
+      content: SizedBox(
+        width: 720,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: metrics
+                    .map(
+                      (metric) => SizedBox(
+                        width: 155,
+                        child: Card(
+                          color: AppColors.surface,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  metric.$2,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  metric.$1,
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 22),
+              Text('Top series', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              if (dashboard.topSeries.isEmpty)
+                const Text(
+                  'No consented series activity yet.',
+                  style: TextStyle(color: AppColors.muted),
+                )
+              else
+                ...dashboard.topSeries.map(
+                  (series) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(series.title),
+                    trailing: Text('${series.opens} opens'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
 }
 
 class _AccessDenied extends StatelessWidget {

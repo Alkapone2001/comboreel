@@ -61,7 +61,7 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Build role-protected series and episode management
 - [x] Add upload workflow and Cloudflare processing status
 - [x] Add catalogue publishing controls
-- [ ] Add analytics dashboards and push campaigns
+- [x] Add analytics dashboards and push campaigns
 
 ### 5. Release readiness
 
@@ -76,7 +76,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Add first-party product analytics events and the role-protected operations dashboard, then connect push-campaign composition and delivery. Provider staging resources still need provisioning for end-to-end video, advertising, store, and payment verification.
+Complete the accessibility audit and replace remaining demo presentation metadata, then begin the privacy/legal and account-deletion release-readiness work. Provider staging resources still need provisioning for end-to-end video, advertising, messaging, store, and payment verification.
 
 ## Implementation status notes
 
@@ -96,3 +96,5 @@ Add first-party product analytics events and the role-protected operations dashb
 - Web purchases use authenticated Stripe Checkout, a raw-body signature-verified webhook, event/session idempotency, and the Stripe Billing Portal. Live products and endpoints still require provider provisioning.
 - Playback sessions are authorized server-side and return short-lived, non-cacheable signed Cloudflare HLS URLs. Flutter includes HLS lifecycle, resume persistence, subtitles, and offline/error behavior; provider staging verification is still required.
 - Creator Studio is available only to authenticated Editor/Admin profiles. It supports responsive series and episode editing, pricing, publication, resumable direct-to-Cloudflare uploads, processing polling, and immutable content audit history. Editors cannot assign roles; role changes require service-role server code.
+- First-party analytics is explicitly opt-in, accepts only an allowlisted event/property vocabulary, stores no email or IP payload, and exposes aggregate 30-day operations metrics to Editor/Admin profiles.
+- Push notifications are explicitly opt-in. Firebase device tokens are server-owned, refreshed per device, and disabled on consent withdrawal or invalidation. Creator Studio supports draft/review/confirm campaign delivery with result counts and notification deep links.

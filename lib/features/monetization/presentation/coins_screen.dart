@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../analytics/data/analytics_repository.dart';
 import '../data/monetization_repository.dart';
 import '../data/store_purchase_service.dart';
 import '../domain/store_purchase.dart';
@@ -14,10 +15,12 @@ class CoinsScreen extends StatefulWidget {
     required this.repository,
     required this.store,
     required this.viewerId,
+    this.analyticsRepository = const NoopAnalyticsRepository(),
   });
   final MonetizationRepository repository;
   final StorePurchaseService store;
   final String? viewerId;
+  final AnalyticsRepository analyticsRepository;
 
   @override
   State<CoinsScreen> createState() => _CoinsScreenState();
@@ -107,6 +110,12 @@ class _CoinsScreenState extends State<CoinsScreen> {
       final result = await widget.repository.verifyMobilePurchase(purchase);
       if (!result.accepted) throw StateError('Purchase was not accepted');
       await widget.store.complete(purchase);
+      unawaited(
+        widget.analyticsRepository.track(
+          'purchase_completed',
+          properties: {'product_id': purchase.productId},
+        ),
+      );
       if (!mounted) return;
       setState(() {
         _processingProductId = null;
@@ -134,6 +143,12 @@ class _CoinsScreenState extends State<CoinsScreen> {
     final userId = widget.viewerId;
     if (userId == null || _processingProductId != null) return;
     setState(() => _processingProductId = product.id);
+    unawaited(
+      widget.analyticsRepository.track(
+        'purchase_started',
+        properties: {'product_id': product.id},
+      ),
+    );
     try {
       await widget.store.purchase(product, userId: userId);
     } catch (error) {

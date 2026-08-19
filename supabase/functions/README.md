@@ -85,3 +85,17 @@ set `GOOGLE_PUBSUB_AUDIENCE` and `GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL` to the
 exact configured values. The function validates the Google-signed identity,
 deduplicates Pub/Sub `messageId`, and queries Play Developer API before changing
 value. It reuses the Google service-account and package secrets documented above.
+
+## push-device
+
+Registers, refreshes, or disables Firebase device tokens for the authenticated
+viewer. Deploy with JWT verification enabled. Supabase-provided secrets are
+sufficient; token rows remain service-owned and unreadable to Flutter.
+
+## send-push-campaign
+
+Claims one reviewed draft and delivers it to currently opted-in devices through
+FCM HTTP v1. Deploy with JWT verification enabled and set
+`FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_EMAIL`, and
+`FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`. Use a dedicated service account granted
+only the Firebase Cloud Messaging send permission.

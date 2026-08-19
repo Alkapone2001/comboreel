@@ -8,14 +8,16 @@ values (
 );
 
 insert into public.series (
-  id, slug, title, synopsis, status, published_at
+  id, slug, title, synopsis, poster_url, hero_url, release_year, age_rating
 ) values (
   '22222222-2222-2222-2222-222222222222',
   'test-series',
   'Test Series',
   'Contract test content',
-  'published',
-  now()
+  'https://example.com/poster.jpg',
+  'https://example.com/hero.jpg',
+  2026,
+  '16+'
 );
 
 insert into public.episodes (
@@ -33,6 +35,9 @@ insert into public.episodes (
   5,
   now()
 );
+
+update public.series set status = 'published'
+where id = '22222222-2222-2222-2222-222222222222';
 
 insert into public.episodes (
   id, series_id, episode_number, title, duration_seconds,

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
+import '../../analytics/data/analytics_repository.dart';
 import '../../home/domain/series.dart';
 import '../../library/data/viewer_library_repository.dart';
 import '../../monetization/data/monetization_repository.dart';
@@ -20,6 +23,7 @@ class SeriesDetailScreen extends StatelessWidget {
     required this.viewerId,
     required this.onWatch,
     required this.onOpenPremium,
+    this.analyticsRepository = const NoopAnalyticsRepository(),
   });
 
   final DramaSeries series;
@@ -30,6 +34,7 @@ class SeriesDetailScreen extends StatelessWidget {
   final String? viewerId;
   final ValueChanged<CatalogueEpisode> onWatch;
   final VoidCallback onOpenPremium;
+  final AnalyticsRepository analyticsRepository;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -269,11 +274,27 @@ class SeriesDetailScreen extends StatelessWidget {
             '${episode.id}-${DateTime.now().microsecondsSinceEpoch}',
       );
       if (result.accessGranted && sheetContext.mounted) {
+        unawaited(
+          analyticsRepository.track(
+            'coin_unlock_completed',
+            seriesId: episode.seriesId,
+            episodeId: episode.id,
+            properties: const {'method': 'coins'},
+          ),
+        );
         Navigator.of(sheetContext).pop();
         onWatch(episode);
       }
     } on InsufficientCoinsException {
       if (sheetContext.mounted) {
+        unawaited(
+          analyticsRepository.track(
+            'rewarded_unlock_completed',
+            seriesId: episode.seriesId,
+            episodeId: episode.id,
+            properties: const {'method': 'rewarded_ad'},
+          ),
+        );
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           const SnackBar(content: Text('You do not have enough coins.')),
         );

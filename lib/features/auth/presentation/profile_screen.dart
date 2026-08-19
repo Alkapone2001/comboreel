@@ -5,6 +5,8 @@ import '../data/auth_repository.dart';
 import '../domain/auth_user.dart';
 import '../../admin/data/admin_repository.dart';
 import '../../admin/domain/admin_models.dart';
+import '../../analytics/data/analytics_repository.dart';
+import '../../notifications/data/push_notification_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
@@ -14,6 +16,8 @@ class ProfileScreen extends StatelessWidget {
     required this.onOpenMyList,
     required this.adminRepository,
     required this.onOpenAdmin,
+    this.analyticsRepository = const NoopAnalyticsRepository(),
+    this.pushNotificationService = const UnavailablePushNotificationService(),
   });
 
   final AuthRepository authRepository;
@@ -21,6 +25,8 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onOpenMyList;
   final AdminRepository adminRepository;
   final VoidCallback onOpenAdmin;
+  final AnalyticsRepository analyticsRepository;
+  final PushNotificationService pushNotificationService;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +44,8 @@ class ProfileScreen extends StatelessWidget {
               onOpenMyList: onOpenMyList,
               adminRepository: adminRepository,
               onOpenAdmin: onOpenAdmin,
+              analyticsRepository: analyticsRepository,
+              pushNotificationService: pushNotificationService,
             ),
     );
   }
@@ -307,12 +315,16 @@ class _SignedInProfile extends StatelessWidget {
     required this.onOpenMyList,
     required this.adminRepository,
     required this.onOpenAdmin,
+    required this.analyticsRepository,
+    required this.pushNotificationService,
   });
   final AuthUser user;
   final AuthRepository repository;
   final VoidCallback onOpenMyList;
   final AdminRepository adminRepository;
   final VoidCallback onOpenAdmin;
+  final AnalyticsRepository analyticsRepository;
+  final PushNotificationService pushNotificationService;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -344,6 +356,9 @@ class _SignedInProfile extends StatelessWidget {
           icon: Icons.language_rounded,
           title: 'Language & subtitles',
         ),
+        _AnalyticsConsentTile(repository: analyticsRepository),
+        if (pushNotificationService.available)
+          _PushConsentTile(service: pushNotificationService),
         const _ProfileTile(
           icon: Icons.settings_outlined,
           title: 'Account settings',
@@ -369,6 +384,102 @@ class _SignedInProfile extends StatelessWidget {
           label: const Text('Sign out'),
         ),
       ],
+    ),
+  );
+}
+
+class _PushConsentTile extends StatefulWidget {
+  const _PushConsentTile({required this.service});
+  final PushNotificationService service;
+
+  @override
+  State<_PushConsentTile> createState() => _PushConsentTileState();
+}
+
+class _PushConsentTileState extends State<_PushConsentTile> {
+  late Future<bool> _enabled;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = widget.service.enabled();
+  }
+
+  Future<void> _change(bool value) async {
+    setState(() => _saving = true);
+    try {
+      await widget.service.setEnabled(value);
+      if (mounted) setState(() => _enabled = Future.value(value));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceFirst('Bad state: ', '')),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: AppColors.surface,
+    child: FutureBuilder<bool>(
+      future: _enabled,
+      builder: (context, snapshot) => SwitchListTile(
+        secondary: const Icon(Icons.notifications_active_outlined),
+        title: const Text('Story notifications'),
+        subtitle: const Text('New episodes and important account updates'),
+        value: snapshot.data ?? false,
+        onChanged: snapshot.hasData && !_saving ? _change : null,
+      ),
+    ),
+  );
+}
+
+class _AnalyticsConsentTile extends StatefulWidget {
+  const _AnalyticsConsentTile({required this.repository});
+  final AnalyticsRepository repository;
+
+  @override
+  State<_AnalyticsConsentTile> createState() => _AnalyticsConsentTileState();
+}
+
+class _AnalyticsConsentTileState extends State<_AnalyticsConsentTile> {
+  late Future<bool> _enabled;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = widget.repository.consentEnabled();
+  }
+
+  Future<void> _change(bool value) async {
+    setState(() => _saving = true);
+    try {
+      await widget.repository.setConsent(value);
+      if (mounted) setState(() => _enabled = Future.value(value));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: AppColors.surface,
+    child: FutureBuilder<bool>(
+      future: _enabled,
+      builder: (context, snapshot) => SwitchListTile(
+        secondary: const Icon(Icons.analytics_outlined),
+        title: const Text('Help improve ComboReel'),
+        subtitle: const Text('Share privacy-safe viewing and purchase events'),
+        value: snapshot.data ?? false,
+        onChanged: snapshot.hasData && !_saving ? _change : null,
+      ),
     ),
   );
 }

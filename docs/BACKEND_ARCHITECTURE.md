@@ -104,3 +104,23 @@ deduplicates `messageId`, and then queries Play Developer API because an RTDN is
 only a state-change signal. Provider event IDs make every transition idempotent.
 Refunded coin packs create one immutable negative ledger adjustment; wallet debt
 prevents already-spent, refunded currency from becoming free future value.
+
+## Analytics privacy
+
+Analytics is first-party and disabled by default. Signed-in viewers can opt in
+or withdraw consent from Profile. The database RPC rechecks current consent on
+every event, accepts only a fixed event enum and property-key allowlist, limits
+payload size, and records pseudonymous user/session IDs without email or IP
+fields. Editor/Admin dashboards receive aggregate counts and ranked series;
+ordinary clients cannot read the event table.
+
+## Push notifications
+
+Firebase registration starts only after explicit notification permission. The
+`push-device` function authenticates the viewer and owns token insertion,
+refresh, and opt-out; Flutter cannot read the token table. Campaigns begin as
+auditable drafts and require a second confirmation in Creator Studio. The send
+function rechecks the Editor/Admin role, atomically claims a draft, targets only
+currently opted-in devices, authenticates to FCM HTTP v1 with OAuth, records
+delivery totals, and disables tokens reported as unregistered. Service-account
+keys and APNs credentials never enter the app bundle.

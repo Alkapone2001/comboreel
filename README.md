@@ -14,6 +14,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - Stripe products, Checkout, webhook, and Billing Portal configuration for web purchases
 - App Store Server Notifications V2 and authenticated Google Play RTDN configuration
 - A Cloudflare Stream API token with Stream edit access for Creator Studio uploads
+- A Firebase project, APNs key, Web Push certificate, and service account for notifications
 
 ## Run the UI prototype
 
@@ -65,6 +66,23 @@ Deploy `admin-stream` with the existing Supabase secrets plus
 Apply `202608190007_admin_content.sql` before deployment. Assign the first admin
 through a trusted service-role environment; ordinary authenticated users and
 editors cannot change roles.
+
+Creator Studio also exposes consented operations analytics and push campaigns.
+Apply `202608190008_analytics_push.sql`, deploy `push-device` and
+`send-push-campaign`, and provide the Firebase client values as Dart defines:
+
+```powershell
+--dart-define=FIREBASE_API_KEY=... `
+--dart-define=FIREBASE_APP_ID=... `
+--dart-define=FIREBASE_MESSAGING_SENDER_ID=... `
+--dart-define=FIREBASE_PROJECT_ID=... `
+--dart-define=FIREBASE_WEB_VAPID_KEY=...
+```
+
+The client values are public Firebase identifiers, not service credentials.
+Firebase service-account credentials remain only in Edge Function secrets.
+Upload an APNs authentication key in Firebase and enable Push Notifications plus
+Background Modes for the production App ID before testing iOS delivery.
 
 ## Verify
 
