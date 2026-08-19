@@ -68,6 +68,10 @@ for 14 days. App Store/TestFlight distribution still requires an Apple
 Developer team, distribution certificate, provisioning profile, protected CI
 signing configuration, and execution on the signed-device matrix.
 
+GitHub-hosted release jobs use the Node 24 generations of checkout, Java setup,
+and artifact upload actions. The deployment audit rejects regression to the
+deprecated Node 20 action majors.
+
 ## Performance evidence required on release hardware
 
 - Capture Flutter DevTools performance traces for cold launch, home scrolling,

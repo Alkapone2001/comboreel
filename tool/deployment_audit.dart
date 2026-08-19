@@ -25,11 +25,29 @@ void main() {
     quality.contains('permissions:\n  contents: read'),
     'Quality workflow permissions must be read-only.',
   );
+  require(
+    !quality.contains('actions/checkout@v4') &&
+        quality.contains('actions/checkout@v6'),
+    'Quality workflow must use the Node 24 checkout action.',
+  );
+  require(
+    quality.contains('actions/setup-java@v5'),
+    'Android release compilation must use the Node 24 Java setup action.',
+  );
+  require(
+    !quality.contains('actions/upload-artifact@v4') &&
+        quality.contains('actions/upload-artifact@v6'),
+    'Quality artifacts must use the Node 24 upload action.',
+  );
 
   final deploy = read('.github/workflows/deploy-web-staging.yml');
   require(
     deploy.contains('workflow_dispatch:'),
     'Staging deployment must require an explicit dispatch.',
+  );
+  require(
+    deploy.contains('actions/checkout@v6'),
+    'Staging deployment must use the Node 24 checkout action.',
   );
   require(
     deploy.contains('environment: staging'),
