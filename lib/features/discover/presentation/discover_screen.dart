@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_artwork.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_series.dart';
 import '../../home/domain/series.dart';
@@ -222,6 +223,7 @@ class _DiscoverCard extends StatelessWidget {
           children: [
             Expanded(
               child: Container(
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -233,11 +235,15 @@ class _DiscoverCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: .07),
                   ),
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.play_circle_outline_rounded,
-                    size: 46,
-                    color: Color(0xCCFFFFFF),
+                child: AppArtwork(
+                  source: series.posterUrl,
+                  fallback: const SizedBox.expand(),
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_circle_outline_rounded,
+                      size: 46,
+                      color: Color(0xCCFFFFFF),
+                    ),
                   ),
                 ),
               ),
@@ -320,5 +326,7 @@ DramaSeries _presentationSeries(CatalogueSeries series, int rank) {
     ageRating: series.ageRating,
     originalLanguage: series.originalLanguage,
     episodeCount: series.episodeCount,
+    posterUrl: series.posterUrl,
+    heroUrl: series.heroUrl,
   );
 }

@@ -16,6 +16,8 @@ class DramaSeries {
     this.ageRating,
     this.originalLanguage = 'en',
     this.episodeCount = 0,
+    this.posterUrl,
+    this.heroUrl,
   });
 
   final String id;
@@ -32,4 +34,6 @@ class DramaSeries {
   final String? ageRating;
   final String originalLanguage;
   final int episodeCount;
+  final String? posterUrl;
+  final String? heroUrl;
 }

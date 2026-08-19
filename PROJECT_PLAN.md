@@ -27,7 +27,7 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Establish the dark cinematic design system
 - [x] Build a responsive branded home/discovery screen
 - [x] Add initial widget coverage
-- [ ] Replace abstract demo artwork with licensed or original assets
+- [x] Replace abstract demo artwork with licensed or original assets
 - [x] Add functional bottom navigation and screen shells
 
 ### 2. Catalogue and playback
@@ -103,3 +103,4 @@ Complete the public legal identity/URLs and staging verification for the impleme
 - Privacy release foundations include versioned in-app legal documents, signup acceptance records, auditable preference changes, portable account export, and recent-login deletion with active-subscription warnings. The release checkbox remains open until operator identity, counsel review, public HTTPS documents/deletion route, and staging lifecycle tests are complete.
 - Release hardening now rejects Android cleartext traffic and debug signing, constrains account-data CORS, adds web security headers, audits client secret boundaries, and enforces a web bundle regression budget. The performance/security/device checkbox remains open pending signed-device, deployed-origin, and provider staging evidence in `docs/RELEASE_QA.md`.
 - Store preparation includes an original ComboReel app-icon system, generated platform sizes, a Play feature graphic, English App Store/Play copy, reviewer paths, current asset specifications, and automated metadata/dimension checks. The store-assets checkbox remains open pending real release-candidate screenshots, final public URLs/contact/legal values, production identifiers, provider products, and review accounts.
+- The offline catalogue now uses five original, provenance-documented cinematic poster/hero assets. Presentation models preserve Supabase `poster_url`/`hero_url`, remote artwork overrides local fallbacks, and gradients remain only as resilient loading/error treatment.

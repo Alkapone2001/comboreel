@@ -12,6 +12,17 @@ void main() {
     expect(find.text('Bound by a Secret'), findsWidgets);
     expect(find.text('Continue Watching'), findsOneWidget);
     expect(find.text('Watch free'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName.contains(
+              'bound-by-a-secret',
+            ),
+      ),
+      findsWidgets,
+    );
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
     await tester.pumpAndSettle();

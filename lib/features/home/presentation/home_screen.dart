@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_artwork.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_series.dart';
 import '../../library/data/viewer_library_repository.dart';
@@ -214,6 +215,8 @@ DramaSeries _toDramaSeries(CatalogueSeries series, int rank) {
     ageRating: series.ageRating,
     originalLanguage: series.originalLanguage,
     episodeCount: series.episodeCount,
+    posterUrl: series.posterUrl,
+    heroUrl: series.heroUrl,
   );
 }
 
@@ -355,7 +358,6 @@ class _HeroBanner extends StatelessWidget {
     return Container(
       height: 440 + ((textScale - 1).clamp(0, 1.5) * 420),
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: LinearGradient(
@@ -371,82 +373,95 @@ class _HeroBanner extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -42,
-            top: 12,
-            child: Icon(
-              Icons.favorite_rounded,
-              size: 230,
-              color: Colors.white.withValues(alpha: .055),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Badge(label: series.badge!),
-                  const SizedBox(height: 14),
-                  Text(
-                    series.title,
-                    style: Theme.of(context).textTheme.headlineLarge,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: AppArtwork(
+          source: series.heroUrl ?? series.posterUrl,
+          alignment: Alignment.centerRight,
+          fallback: const SizedBox.expand(),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -42,
+                  top: 12,
+                  child: Icon(
+                    Icons.favorite_rounded,
+                    size: 230,
+                    color: Colors.white.withValues(alpha: .055),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    series.genre,
-                    style: const TextStyle(
-                      color: Color(0xFFE8BDC9),
-                      fontWeight: FontWeight.w600,
+                ),
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Badge(label: series.badge!),
+                        const SizedBox(height: 14),
+                        Text(
+                          series.title,
+                          style: Theme.of(context).textTheme.headlineLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          series.genre,
+                          style: const TextStyle(
+                            color: Color(0xFFE8BDC9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          series.episodeLabel,
+                          style: const TextStyle(color: AppColors.muted),
+                        ),
+                        const SizedBox(height: 20),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 10,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: onPlay,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 22,
+                                  vertical: 16,
+                                ),
+                              ),
+                              icon: const Icon(Icons.play_arrow_rounded),
+                              label: const Text('Watch free'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: onOpenSeries,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(
+                                  color: Color(0x66FFFFFF),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 16,
+                                ),
+                              ),
+                              icon: const Icon(Icons.info_outline_rounded),
+                              label: const Text('View details'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    series.episodeLabel,
-                    style: const TextStyle(color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 20),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 10,
-                    children: [
-                      FilledButton.icon(
-                        onPressed: onPlay,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 22,
-                            vertical: 16,
-                          ),
-                        ),
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Watch free'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: onOpenSeries,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Color(0x66FFFFFF)),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 16,
-                          ),
-                        ),
-                        icon: const Icon(Icons.info_outline_rounded),
-                        label: const Text('View details'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -622,7 +637,14 @@ class _Artwork extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       border: Border.all(color: Colors.white.withValues(alpha: .07)),
     ),
-    child: ClipRRect(borderRadius: BorderRadius.circular(18), child: child),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: AppArtwork(
+        source: series.posterUrl,
+        fallback: const SizedBox.expand(),
+        child: child,
+      ),
+    ),
   );
 }
 

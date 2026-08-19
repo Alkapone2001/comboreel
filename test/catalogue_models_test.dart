@@ -1,5 +1,6 @@
 import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/catalogue/domain/catalogue_series.dart';
+import 'package:comboreel/features/catalogue/data/offline_catalogue_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -53,5 +54,18 @@ void main() {
     expect(episode.seasonNumber, 1);
     expect(episode.seriesTitle, 'Bound by a Secret');
     expect(episode.synopsis, 'A warning changes the plan.');
+  });
+
+  test('offline catalogue ships original poster and hero artwork', () async {
+    const repository = OfflineCatalogueRepository();
+    final series = await repository.latestSeries();
+    expect(series, isNotEmpty);
+    expect(
+      series.every(
+        (item) => item.posterUrl?.startsWith('assets/artwork/') ?? false,
+      ),
+      isTrue,
+    );
+    expect(series.first.heroUrl, 'assets/artwork/bound-by-a-secret-hero.jpg');
   });
 }

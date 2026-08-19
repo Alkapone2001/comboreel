@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_artwork.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_series.dart';
 import '../../home/domain/series.dart';
@@ -89,12 +90,19 @@ class MyListScreen extends StatelessWidget {
               child: ListTile(
                 onTap: () => onOpenSeries(presentation),
                 contentPadding: const EdgeInsets.all(10),
-                leading: Container(
+                leading: SizedBox(
                   width: 58,
                   height: 72,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: presentation.colors),
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
+                    child: AppArtwork(
+                      source: presentation.posterUrl,
+                      fallback: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: presentation.colors),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 title: Text(
@@ -132,5 +140,7 @@ DramaSeries _presentation(CatalogueSeries series, int index) {
     ageRating: series.ageRating,
     originalLanguage: series.originalLanguage,
     episodeCount: series.episodeCount,
+    posterUrl: series.posterUrl,
+    heroUrl: series.heroUrl,
   );
 }

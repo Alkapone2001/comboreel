@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_artwork.dart';
 import '../../catalogue/data/catalogue_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../catalogue/domain/catalogue_season.dart';
@@ -66,24 +67,29 @@ class SeriesDetailScreen extends StatelessWidget {
                   colors: series.colors,
                 ),
               ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Icon(
-                    Icons.favorite_rounded,
-                    size: 240,
-                    color: Colors.white.withValues(alpha: .06),
-                  ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0xDD09090C)],
+              child: AppArtwork(
+                source: series.heroUrl ?? series.posterUrl,
+                fallback: const SizedBox.expand(),
+                alignment: Alignment.centerRight,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Icon(
+                      Icons.favorite_rounded,
+                      size: 240,
+                      color: Colors.white.withValues(alpha: .06),
+                    ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0xDD09090C)],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
