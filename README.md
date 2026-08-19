@@ -12,6 +12,7 @@ ComboReel is a Flutter vertical short-drama platform targeting iOS, Android, and
 - An AdMob account and deployed rewarded SSV callback for production ad unlocks
 - App Store Connect and Google Play products plus server API credentials for mobile purchases
 - Stripe products, Checkout, webhook, and Billing Portal configuration for web purchases
+- App Store Server Notifications V2 and authenticated Google Play RTDN configuration
 
 ## Run the UI prototype
 

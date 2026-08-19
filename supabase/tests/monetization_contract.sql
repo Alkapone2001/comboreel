@@ -240,4 +240,55 @@ begin
 end;
 $$;
 
+select public.reverse_mobile_coin_purchase_server(
+  'google', 'rtdn-refund-0001', 'voided_purchase', 'google-token-0001'
+);
+select public.reverse_mobile_coin_purchase_server(
+  'google', 'rtdn-refund-0001', 'voided_purchase', 'google-token-0001'
+);
+select public.reconcile_mobile_subscription_server(
+  'apple', 'apple-notification-0001', 'EXPIRED',
+  '11111111-1111-1111-1111-111111111111',
+  'apple-original-sub-0001', 'comboreel.premium.monthly',
+  'expired', now() - interval '30 days', now()
+);
+select public.reconcile_mobile_subscription_server(
+  'apple', 'apple-notification-0001', 'EXPIRED',
+  '11111111-1111-1111-1111-111111111111',
+  'apple-original-sub-0001', 'comboreel.premium.monthly',
+  'expired', now() - interval '30 days', now()
+);
+
+do $$
+declare
+  v_balance integer;
+  v_refund_count integer;
+  v_provider_event_count integer;
+  v_apple_status public.subscription_status;
+begin
+  select balance into v_balance from public.wallets
+  where user_id = '11111111-1111-1111-1111-111111111111';
+  if v_balance <> 125 then
+    raise exception 'expected chargeback balance 125, got %', v_balance;
+  end if;
+  select count(*) into v_refund_count from public.coin_transactions
+  where user_id = '11111111-1111-1111-1111-111111111111'
+    and reason = 'refund'
+    and reference_id = 'reversal:google:google-token-0001';
+  if v_refund_count <> 1 then
+    raise exception 'expected one mobile refund ledger entry, got %', v_refund_count;
+  end if;
+  select count(*) into v_provider_event_count from public.mobile_provider_events;
+  if v_provider_event_count <> 2 then
+    raise exception 'expected two unique mobile provider events, got %', v_provider_event_count;
+  end if;
+  select status into v_apple_status from public.subscriptions
+  where platform = 'apple'
+    and external_subscription_id = 'apple-original-sub-0001';
+  if v_apple_status <> 'expired' then
+    raise exception 'expected expired Apple subscription, got %', v_apple_status;
+  end if;
+end;
+$$;
+
 rollback;

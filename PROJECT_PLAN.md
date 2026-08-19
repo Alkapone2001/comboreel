@@ -54,7 +54,7 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Connect rewarded-ad verification and unlocks
 - [x] Add mobile in-app purchases and subscriptions
 - [x] Add Stripe Checkout and webhooks for web purchases
-- [ ] Add provider notifications and full refund/renewal reconciliation
+- [x] Add provider notifications and full refund/renewal reconciliation
 
 ### 4. Admin and operations
 
@@ -92,6 +92,6 @@ Provision staging Supabase, Cloudflare, and AdMob resources; deploy both Edge Fu
 - Coin spends and entitlement grants are atomic database operations with idempotency. SQL contract coverage proves coin and rewarded-ad replay safety. Live rewards remain disabled until AdMob and the SSV callback are configured.
 - Rewarded ads use short-lived episode claims and wait for a Google-signed SSV callback before granting access. The app uses development identifiers until production AdMob resources and consent handling are configured.
 - Mobile purchases use Apple/Google server APIs and a replay-safe fulfillment RPC; Flutter consumes/completes transactions only after verification. Product creation, agreements, tax/banking setup, and sandbox-device validation remain provider tasks.
-- Restore Purchases re-verifies owned subscriptions; App Store Server Notifications and Google RTDN are still required for immediate refund, revocation, and renewal reconciliation while the app is closed.
+- Restore Purchases re-verifies owned subscriptions. App Store Server Notifications V2 and authenticated Google RTDN reconcile renewals, grace, pause, cancellation, expiry, revocation, and refunds while the app is closed.
 - Web purchases use authenticated Stripe Checkout, a raw-body signature-verified webhook, event/session idempotency, and the Stripe Billing Portal. Live products and endpoints still require provider provisioning.
 - Playback sessions are authorized server-side and return short-lived, non-cacheable signed Cloudflare HLS URLs. Flutter includes HLS lifecycle, resume persistence, subtitles, and offline/error behavior; provider staging verification is still required.

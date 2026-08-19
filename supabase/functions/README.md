@@ -66,3 +66,22 @@ Subscribe it to `checkout.session.completed`, `customer.subscription.created`,
 `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`,
 and `invoice.payment_failed`. Configure the Billing Portal separately in test
 and live modes.
+
+## apple-store-notifications
+
+Receives App Store Server Notifications V2 and verifies the outer notification,
+transaction, and renewal JWS values with Apple's official server library. Deploy
+without gateway JWT verification. Set `APPLE_BUNDLE_ID`, production numeric
+`APPLE_APP_ID`, and `APPLE_ROOT_CA_CERTIFICATES_BASE64`, a JSON array containing
+base64 DER Apple root certificates downloaded from Apple PKI. Online certificate
+checks remain enabled. Configure this public URL for both sandbox and production
+notifications in App Store Connect.
+
+## google-play-notifications
+
+Receives authenticated Google Cloud Pub/Sub push messages for Play RTDN. Deploy
+without gateway JWT verification. Configure the push subscription with OIDC and
+set `GOOGLE_PUBSUB_AUDIENCE` and `GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL` to the
+exact configured values. The function validates the Google-signed identity,
+deduplicates Pub/Sub `messageId`, and queries Play Developer API before changing
+value. It reuses the Google service-account and package secrets documented above.

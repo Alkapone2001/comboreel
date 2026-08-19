@@ -81,3 +81,17 @@ Stripe event IDs and Checkout Session IDs are separate idempotency boundaries.
 Customer IDs have one immutable ComboReel owner. Subscription lifecycle and
 invoice events reconcile access while the app is closed. Billing Portal sessions
 are created for the authenticated viewer without accepting a client customer ID.
+
+## Mobile lifecycle notifications
+
+App Store Server Notifications V2 are verified with Apple's official library,
+trusted Apple root certificates, environment, bundle ID, app ID, and online
+certificate checks. Signed transaction and renewal data determine the account,
+product, status, grace period, revocation, and expiry.
+
+Google Play RTDN arrives through an authenticated Pub/Sub push subscription. The
+handler verifies Google's OIDC token, exact audience and service-account email,
+deduplicates `messageId`, and then queries Play Developer API because an RTDN is
+only a state-change signal. Provider event IDs make every transition idempotent.
+Refunded coin packs create one immutable negative ledger adjustment; wallet debt
+prevents already-spent, refunded currency from becoming free future value.

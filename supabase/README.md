@@ -44,6 +44,11 @@ webhook idempotency, web coin fulfillment, and subscription reconciliation.
 Deploy `stripe-checkout` with JWT verification and `stripe-webhook` without it;
 the webhook authenticates Stripe against the raw request body and signing secret.
 
+`202608190006_mobile_lifecycle.sql` adds mobile provider-event idempotency,
+subscription reconciliation, and coin-purchase reversals. Deploy both Apple and
+Google notification functions without gateway JWT verification; each authenticates
+its provider using the mechanism documented in `functions/README.md`.
+
 ## Private video playback
 
 Deploy `functions/playback-session` after setting its documented secrets. Mark every licensed Stream video `requireSignedURLs: true`. The function authorizes the episode before requesting a temporary token; clients never receive the Cloudflare API token or service-role key.
