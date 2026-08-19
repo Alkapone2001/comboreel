@@ -142,3 +142,36 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
+
+  ios:
+    name: Unsigned iOS release application
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.0
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Build release application without store signing
+        run: flutter build ios --release --no-codesign
+      - name: Validate iOS application metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="build/ios/iphoneos/Runner.app"
+          test -d "$APP"
+          plutil -lint "$APP/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.comboreel.comboreel"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$APP/Info.plist")" = "comboreel"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")" = "15.0"
+      - name: Upload unsigned iOS application
+        uses: actions/upload-artifact@v4
+        with:
+          name: comboreel-ios-unsigned-${{ github.sha }}
+          path: build/ios/iphoneos/Runner.app
+          if-no-files-found: error
+          retention-days: 14

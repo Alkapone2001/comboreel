@@ -61,6 +61,13 @@ The current Windows workstation exposes Java 8 and no Android SDK. Local device
 claims must not be signed off here until the operator installs the supported
 toolchain and personally accepts the Android SDK license agreement.
 
+iOS release compilation is enforced on a macOS CI runner with
+`--no-codesign`. CI validates the built application bundle, identifier, minimum
+iOS version, and `comboreel` deep-link scheme, then retains the unsigned `.app`
+for 14 days. App Store/TestFlight distribution still requires an Apple
+Developer team, distribution certificate, provisioning profile, protected CI
+signing configuration, and execution on the signed-device matrix.
+
 ## Performance evidence required on release hardware
 
 - Capture Flutter DevTools performance traces for cold launch, home scrolling,
