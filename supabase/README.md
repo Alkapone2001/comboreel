@@ -6,8 +6,17 @@ The migration in `migrations/` is the authoritative database definition. Do not 
 
 1. Run `supabase init` only if no local config exists.
 2. Run `supabase start`.
-3. Apply migrations with `supabase db reset`.
-4. Copy the local API URL and anon key into Flutter `--dart-define` values.
+3. Run `supabase db reset` to apply every migration to the local stack.
+4. On Windows, run `pwsh -File tool/run_local_supabase_smoke.ps1` from the
+   repository root. The smoke test creates disposable local users/content and
+   verifies Auth, public catalogue visibility, profile/favourite isolation,
+   protected role assignment, preferences, and signup consent through the
+   PostgREST API.
+
+The local dashboard is available at `http://127.0.0.1:54323`. Local keys are
+development-only and are read from `supabase status`; never copy them into a
+hosted environment or commit hosted project secrets.
+5. Copy the local API URL and anon key into Flutter `--dart-define` values.
 
 ## Production setup
 

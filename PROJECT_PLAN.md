@@ -86,7 +86,7 @@ Complete the public legal identity/URLs and staging verification for the impleme
 - Episode 1–5 free and later episodes locked is represented in the UI; coin and rewarded-ad entitlements are persisted and server verified.
 - Discover, Profile, wallet history, coin unlocks, rewarded unlocks, localized mobile products, subscription purchases, and restore have repository-backed flows. Live store validation awaits provider provisioning.
 - Supabase initialization is opt-in through compile-time definitions; no credentials or secret keys are stored in the repository.
-- The schema migration has been executed successfully against a clean PostgreSQL 16 container. Live Supabase Auth/RLS integration still requires a staging project.
+- The schema migration has been executed successfully against clean PostgreSQL 16 and local Supabase PostgreSQL 17 environments. A repeatable HTTP smoke test proves signup consent, public catalogue visibility, profile/favourite isolation, safe preference updates, and role-escalation denial through Auth/PostgREST. Hosted staging verification still requires a project.
 - Home and series episode lists now load through repository contracts and include loading, empty, and failure behavior. Offline mode supplies deterministic content; configured builds query published Supabase rows.
 - Favourites, My List, player progress saves, and Continue Watching now share one viewer-library contract with offline and Supabase implementations.
 - Coin spends and entitlement grants are atomic database operations with idempotency. SQL contract coverage proves coin and rewarded-ad replay safety. Live rewards remain disabled until AdMob and the SSV callback are configured.
