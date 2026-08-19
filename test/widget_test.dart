@@ -59,4 +59,26 @@ void main() {
     expect(find.text('EP 1 / 42'), findsOneWidget);
     expect(find.text('Next episode'), findsOneWidget);
   });
+
+  testWidgets('discover searches and opens a matching series', (tester) async {
+    await tester.pumpWidget(const ComboReelApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Discover'));
+    await tester.pumpAndSettle();
+    expect(find.text('Browse all'), findsOneWidget);
+
+    await tester.enterText(find.byType(SearchBar), 'Alibi');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Results for'), findsOneWidget);
+    expect(find.text('The Alibi'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('The Alibi'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('The Alibi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SeriesDetailScreen), findsOneWidget);
+  });
 }

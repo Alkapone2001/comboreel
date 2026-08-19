@@ -37,6 +37,7 @@ Features are separated into `data`, `domain`, and `presentation` layers. Shared 
 - [x] Build sign-in, registration, signed-in, and offline profile states
 - [x] Define typed catalogue and viewer-library repositories
 - [x] Connect home and episode lists to offline/Supabase repository composition
+- [x] Build repository-backed Discover search with loading, empty, and error states
 - [ ] Add seasons and replace all remaining demo-only presentation metadata
 - [x] Build the vertical player interface foundation
 - [ ] Connect the player to Cloudflare Stream
@@ -71,7 +72,7 @@ The MVP includes accounts, catalogue/search, vertical playback, favourites, watc
 
 ## Immediate next step
 
-Create a staging Supabase project, apply the reviewed migration, configure authentication URLs, and build Discover/search against the catalogue repository.
+Create a staging Supabase project, apply the reviewed migration, configure authentication URLs, and connect authenticated favourites/watch progress to the UI.
 
 ## Implementation status notes
 

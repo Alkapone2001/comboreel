@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/services/app_services.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/profile_screen.dart';
+import '../features/discover/presentation/discover_screen.dart';
 import '../features/home/domain/series.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/player/presentation/episode_player_screen.dart';
@@ -46,10 +47,9 @@ class _AppShellState extends State<AppShell> {
         onOpenSeries: _openSeries,
         onPlay: _openPlayer,
       ),
-      const _PlaceholderPage(
-        icon: Icons.explore_rounded,
-        title: 'Discover stories',
-        message: 'Search, genres, trending charts, and personalized collections will live here.',
+      DiscoverScreen(
+        catalogueRepository: widget.services.catalogueRepository,
+        onOpenSeries: _openSeries,
       ),
       const _PlaceholderPage(
         icon: Icons.monetization_on_rounded,
