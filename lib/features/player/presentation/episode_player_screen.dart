@@ -51,6 +51,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   bool _transitioning = false;
   bool _completionHandled = false;
   bool _resumeAfterBackground = false;
+  bool _scrubbing = false;
   String? _error;
   late final List<CatalogueEpisode> _episodes;
   late CatalogueEpisode _episode;
@@ -301,7 +302,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       return;
     }
     final second = controller.value.position.inSeconds;
-    if (second != _positionSeconds && mounted) {
+    if (!_scrubbing && second != _positionSeconds && mounted) {
       setState(() => _positionSeconds = second);
     }
     if (second > 0 && second % 10 == 0 && second != _lastPersistedSecond) {
@@ -342,6 +343,21 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     } catch (_) {
       // Playback remains available when a best-effort progress write is offline.
     }
+  }
+
+  Future<void> _seekTo(double rawSeconds) async {
+    final duration =
+        _videoController?.value.duration.inSeconds ?? _episode.durationSeconds;
+    if (duration <= 0) return;
+    final target = rawSeconds.round().clamp(0, duration);
+    _scrubbing = false;
+    _completionHandled = false;
+    if (mounted) setState(() => _positionSeconds = target);
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) {
+      await controller.seekTo(Duration(seconds: target));
+    }
+    await _saveProgress(completed: target >= duration - 3);
   }
 
   int get _currentIndex =>
@@ -523,9 +539,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     final controller = _videoController;
     final duration =
         controller?.value.duration.inSeconds ?? _episode.durationSeconds;
-    final fraction = duration <= 0
-        ? 0.0
-        : (_positionSeconds / duration).clamp(0.0, 1.0);
+    final seekValue = _positionSeconds.clamp(0, duration <= 0 ? 1 : duration);
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
@@ -644,11 +658,33 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
                       ],
                     ),
                     const SizedBox(height: 18),
-                    LinearProgressIndicator(
-                      value: fraction,
-                      minHeight: 3,
-                      color: AppColors.coral,
-                      backgroundColor: Colors.white24,
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: AppColors.coral,
+                        inactiveTrackColor: Colors.white24,
+                        thumbColor: AppColors.coral,
+                        overlayColor: AppColors.coral.withValues(alpha: 0.18),
+                        trackHeight: 3,
+                      ),
+                      child: Slider(
+                        key: const ValueKey('playback-seek'),
+                        value: seekValue.toDouble(),
+                        min: 0,
+                        max: duration <= 0 ? 1 : duration.toDouble(),
+                        semanticFormatterCallback: (seconds) =>
+                            '${_formatDuration(seconds.round())} of ${_formatDuration(duration)}',
+                        onChangeStart: duration <= 0
+                            ? null
+                            : (_) => _scrubbing = true,
+                        onChanged: duration <= 0
+                            ? null
+                            : (seconds) => setState(
+                                () => _positionSeconds = seconds.round(),
+                              ),
+                        onChangeEnd: duration <= 0
+                            ? null
+                            : (seconds) => unawaited(_seekTo(seconds)),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     if (_episodes.length > 1)
@@ -680,7 +716,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
                         label:
                             'Playback position ${_formatDuration(_positionSeconds)}',
                         child: Text(
-                          _formatDuration(_positionSeconds),
+                          '${_formatDuration(_positionSeconds)} / ${_formatDuration(duration)}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.muted,

@@ -67,15 +67,41 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Video could not load'), findsOneWidget);
-    expect(find.text('0:24'), findsOneWidget);
+    expect(find.text('0:24 / 1:30'), findsOneWidget);
 
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
 
     expect(find.text('Video could not load'), findsNothing);
-    expect(find.text('0:24'), findsOneWidget);
+    expect(find.text('0:24 / 1:30'), findsOneWidget);
     expect(playback.requests, 2);
     expect(library.savedEpisodeIds, contains('episode-6'));
+  });
+
+  testWidgets('seek control updates and persists playback position', (
+    tester,
+  ) async {
+    final library = _NoopLibrary();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: library,
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final seek = find.byKey(const ValueKey('playback-seek'));
+    expect(seek, findsOneWidget);
+    final rect = tester.getRect(seek);
+    await tester.tapAt(Offset(rect.left + rect.width * 0.5, rect.center.dy));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0:45 / 1:30'), findsOneWidget);
+    expect(library.savedPositions.last, 45);
   });
 
   testWidgets('player honors the preferred subtitle language', (tester) async {
@@ -291,6 +317,7 @@ class _MultipleSubtitlePlaybackRepository implements PlaybackRepository {
 
 class _NoopLibrary implements ViewerLibraryRepository {
   final List<String> savedEpisodeIds = [];
+  final List<int> savedPositions = [];
 
   @override
   Future<void> addFavourite({
@@ -315,5 +342,8 @@ class _NoopLibrary implements ViewerLibraryRepository {
     required String episodeId,
     required int positionSeconds,
     required bool completed,
-  }) async => savedEpisodeIds.add(episodeId);
+  }) async {
+    savedEpisodeIds.add(episodeId);
+    savedPositions.add(positionSeconds);
+  }
 }
