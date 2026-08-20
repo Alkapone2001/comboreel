@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:comboreel/features/privacy/data/account_export_service.dart';
 import 'package:comboreel/features/privacy/data/privacy_repository.dart';
 import 'package:comboreel/features/privacy/data/subscription_management_service.dart';
 import 'package:comboreel/features/privacy/presentation/privacy_center_screen.dart';
@@ -28,6 +31,13 @@ void main() {
     expect(service.supports('unknown'), isFalse);
   });
 
+  test('account export file preserves UTF-8 JSON and safe metadata', () {
+    final file = AccountExportFile.fromJson('{"display_name":"L\u00e9a"}');
+    expect(utf8.decode(file.bytes), '{"display_name":"L\u00e9a"}');
+    expect(AccountExportFile.fileName, 'comboreel-account-export.json');
+    expect(AccountExportFile.mimeType, 'application/json');
+  });
+
   testWidgets('privacy center exposes policy, export, and deletion controls', (
     tester,
   ) async {
@@ -35,6 +45,7 @@ void main() {
       MaterialApp(
         home: PrivacyCenterScreen(
           repository: _FakePrivacyRepository(),
+          accountExportService: _FakeAccountExportService(),
           subscriptionManagementService: _FakeSubscriptionManager(),
         ),
       ),
@@ -43,6 +54,14 @@ void main() {
     expect(find.text('Terms of Use'), findsOneWidget);
     expect(find.text('Export my data'), findsOneWidget);
     expect(find.text('Delete account'), findsOneWidget);
+
+    await tester.tap(find.text('Export my data'));
+    await tester.pumpAndSettle();
+    expect(utf8.decode(_FakeAccountExportService.lastFile!.bytes), '{}');
+    expect(
+      find.text('Your JSON export is ready to save or share.'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Delete account'));
     await tester.pump();
@@ -56,6 +75,15 @@ void main() {
     await tester.pump();
     expect(_FakeSubscriptionManager.managedPlatform, 'google');
   });
+}
+
+class _FakeAccountExportService implements AccountExportService {
+  static AccountExportFile? lastFile;
+
+  @override
+  Future<void> export(AccountExportFile file, {Rect? origin}) async {
+    lastFile = file;
+  }
 }
 
 class _FakeSubscriptionManager implements SubscriptionManagementService {

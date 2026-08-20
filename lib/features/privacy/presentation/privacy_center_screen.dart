@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../data/account_export_service.dart';
 import '../data/privacy_repository.dart';
 import '../data/subscription_management_service.dart';
 import 'legal_document_screen.dart';
@@ -9,10 +9,12 @@ class PrivacyCenterScreen extends StatefulWidget {
   const PrivacyCenterScreen({
     super.key,
     required this.repository,
+    this.accountExportService = const SystemAccountExportService(),
     this.subscriptionManagementService =
         const UnavailableSubscriptionManagementService(),
   });
   final PrivacyRepository repository;
+  final AccountExportService accountExportService;
   final SubscriptionManagementService subscriptionManagementService;
   @override
   State<PrivacyCenterScreen> createState() => _PrivacyCenterScreenState();
@@ -23,13 +25,20 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
 
   Future<void> _export() async {
     setState(() => _busy = true);
+    final renderObject = context.findRenderObject();
+    final origin = renderObject is RenderBox && renderObject.hasSize
+        ? renderObject.localToGlobal(Offset.zero) & renderObject.size
+        : null;
     try {
       final data = await widget.repository.exportData();
-      await Clipboard.setData(ClipboardData(text: data));
+      await widget.accountExportService.export(
+        AccountExportFile.fromJson(data),
+        origin: origin,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Your JSON export was copied to the clipboard.'),
+            content: Text('Your JSON export is ready to save or share.'),
           ),
         );
       }
@@ -182,7 +191,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
         ListTile(
           leading: const Icon(Icons.download_outlined),
           title: const Text('Export my data'),
-          subtitle: const Text('Copy a portable JSON record'),
+          subtitle: const Text('Save or share a portable JSON file'),
           onTap: _busy ? null : _export,
         ),
         const Divider(height: 32),

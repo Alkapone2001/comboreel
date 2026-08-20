@@ -2,7 +2,7 @@
 
 ComboReel now includes versioned Privacy Policy and Terms screens, mandatory
 registration acceptance, append-only consent history, opt-in preference records,
-authenticated JSON export, recent-login account deletion, subscription warnings,
+authenticated UTF-8 JSON file export, recent-login account deletion, subscription warnings,
 push-device shutdown, Stripe customer cleanup, and cascading application-data
 deletion.
 
@@ -38,6 +38,8 @@ deletion.
 
 - Screen recording of in-app deletion and the external web route.
 - Export fixture demonstrating only the authenticated account is returned.
+  Verify the `.json` filename, UTF-8 contents, native save/share sheet, and web
+  download fallback without copying account data through the clipboard.
 - Database evidence that profile-linked rows cascade after deletion.
 - Consent-history rows for grant and withdrawal, with document versions.
 - Screenshots of subscription warning and store cancellation path.
