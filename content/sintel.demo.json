@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "series": {
+    "id": "demo-sintel",
+    "slug": "sintel-open-movie",
+    "title": "Sintel",
+    "release_year": 2010,
+    "original_language": "en",
+    "age_rating": "13+",
+    "genres": ["Fantasy", "Drama", "Adventure"],
+    "attribution": "Blender Foundation / Durian Open Movie Project",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0/",
+    "source_url": "https://peach.themazzone.com/durian/movies/sintel-1024-surround.mp4",
+    "source_sha256": "1DC6F2CA9762DFCC7D1B1843129A3E4F351D1FE935DEA2241C7B359C11EBC1D8",
+    "adaptation_notice": "Divided into nine short chapters; upload masters place the complete widescreen image on a blurred 9:16 canvas. The complete original credit scroll remains in episode 9."
+  },
+  "episodes": [
+    {"number": 1, "title": "Ashes in the Snow", "start_seconds": 0, "end_seconds": 101},
+    {"number": 2, "title": "The Dragon She Saved", "start_seconds": 101, "end_seconds": 196},
+    {"number": 3, "title": "Years of Searching", "start_seconds": 196, "end_seconds": 287},
+    {"number": 4, "title": "The Guardian", "start_seconds": 287, "end_seconds": 350},
+    {"number": 5, "title": "Into the Mountain", "start_seconds": 350, "end_seconds": 434},
+    {"number": 6, "title": "The Truth Revealed", "start_seconds": 434, "end_seconds": 543},
+    {"number": 7, "title": "Fire and Memory", "start_seconds": 543, "end_seconds": 684},
+    {"number": 8, "title": "The Final Choice", "start_seconds": 684, "end_seconds": 744},
+    {"number": 9, "title": "After the Ashes", "start_seconds": 744, "end_seconds": 888}
+  ]
+}

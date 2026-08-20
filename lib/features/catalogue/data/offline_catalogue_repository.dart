@@ -23,6 +23,20 @@ class OfflineCatalogueRepository
       episodeCount: 42,
     ),
     CatalogueSeries(
+      id: 'demo-sintel',
+      slug: 'sintel-open-movie',
+      title: 'Sintel',
+      synopsis: 'A lone warrior crosses a frozen world searching for the dragon she once saved. An official Blender Foundation open movie, adapted into short chapters under CC BY 3.0.',
+      posterUrl: 'assets/artwork/sintel-poster.jpg',
+      heroUrl: 'assets/artwork/sintel-hero.jpg',
+      originalLanguage: 'en',
+      releaseYear: 2010,
+      isFeatured: true,
+      ageRating: '13+',
+      genres: ['Fantasy', 'Drama', 'Adventure'],
+      episodeCount: 9,
+    ),
+    CatalogueSeries(
       id: 'demo-stolen-vows',
       slug: 'stolen-vows',
       title: 'Stolen Vows',
@@ -92,43 +106,97 @@ class OfflineCatalogueRepository
   }
 
   @override
-  Future<List<CatalogueEpisode>> episodesForSeries(String seriesId) async =>
-      List.generate(
-        42,
+  Future<List<CatalogueEpisode>> episodesForSeries(String seriesId) async {
+    if (seriesId == 'demo-sintel') {
+      const durations = [101, 95, 91, 63, 84, 109, 141, 60, 144];
+      const titles = [
+        'Ashes in the Snow',
+        'The Dragon She Saved',
+        'Years of Searching',
+        'The Guardian',
+        'Into the Mountain',
+        'The Truth Revealed',
+        'Fire and Memory',
+        'The Final Choice',
+        'After the Ashes',
+      ];
+      const synopses = [
+        'A lone traveller faces an ambush in a frozen mountain pass.',
+        'A memory reveals the wounded creature that changed Sintel\'s life.',
+        'Sintel follows a fading trail across years and distant lands.',
+        'A guardian stands between Sintel and the answers she seeks.',
+        'Deep inside the mountain, the search reaches its most dangerous point.',
+        'A discovery forces Sintel to confront what time has changed.',
+        'Fire, memory, and grief collide in the heart of the mountain.',
+        'Sintel must choose what remains after the truth is known.',
+        'The journey ends with the complete original Blender Foundation credits.',
+      ];
+      return List.generate(
+        titles.length,
         (index) => CatalogueEpisode(
-          id: '$seriesId-episode-${index + 1}',
+          id: 'demo-sintel-episode-${index + 1}',
           seriesId: seriesId,
           episodeNumber: index + 1,
-          title: _episodeTitle(index + 1),
-          durationSeconds: 92 + (index % 18),
+          title: titles[index],
+          durationSeconds: durations[index],
           thumbnailUrl: null,
-          isFree: index < 5,
-          coinPrice: 5,
-          seasonId: '$seriesId-season-${(index ~/ 14) + 1}',
-          seasonNumber: (index ~/ 14) + 1,
-          seriesTitle: _series
-              .where((series) => series.id == seriesId)
-              .firstOrNull
-              ?.title,
-          synopsis: _episodeSynopsis(index + 1),
+          isFree: true,
+          coinPrice: 0,
+          seasonId: 'demo-sintel-season-1',
+          seasonNumber: 1,
+          seriesTitle: 'Sintel',
+          synopsis: synopses[index],
         ),
       );
+    }
+    return List.generate(
+      42,
+      (index) => CatalogueEpisode(
+        id: '$seriesId-episode-${index + 1}',
+        seriesId: seriesId,
+        episodeNumber: index + 1,
+        title: _episodeTitle(index + 1),
+        durationSeconds: 92 + (index % 18),
+        thumbnailUrl: null,
+        isFree: index < 5,
+        coinPrice: 5,
+        seasonId: '$seriesId-season-${(index ~/ 14) + 1}',
+        seasonNumber: (index ~/ 14) + 1,
+        seriesTitle: _series
+            .where((series) => series.id == seriesId)
+            .firstOrNull
+            ?.title,
+        synopsis: _episodeSynopsis(index + 1),
+      ),
+    );
+  }
 
   @override
-  Future<List<CatalogueSeason>> seasonsForSeries(String seriesId) async =>
-      List.generate(
-        3,
-        (index) => CatalogueSeason(
-          id: '$seriesId-season-${index + 1}',
-          seriesId: seriesId,
-          number: index + 1,
-          title: switch (index) {
-            0 => 'The Secret',
-            1 => 'The Reckoning',
-            _ => 'The Choice',
-          },
+  Future<List<CatalogueSeason>> seasonsForSeries(String seriesId) async {
+    if (seriesId == 'demo-sintel') {
+      return const [
+        CatalogueSeason(
+          id: 'demo-sintel-season-1',
+          seriesId: 'demo-sintel',
+          number: 1,
+          title: 'The Open Movie',
         ),
-      );
+      ];
+    }
+    return List.generate(
+      3,
+      (index) => CatalogueSeason(
+        id: '$seriesId-season-${index + 1}',
+        seriesId: seriesId,
+        number: index + 1,
+        title: switch (index) {
+          0 => 'The Secret',
+          1 => 'The Reckoning',
+          _ => 'The Choice',
+        },
+      ),
+    );
+  }
 
   static String _episodeTitle(int episode) => switch (episode) {
     1 => 'The Unexpected Guest',

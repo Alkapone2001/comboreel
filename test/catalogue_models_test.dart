@@ -1,6 +1,8 @@
 import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/catalogue/domain/catalogue_series.dart';
 import 'package:comboreel/features/catalogue/data/offline_catalogue_repository.dart';
+import 'package:comboreel/features/player/data/offline_playback_repository.dart';
+import 'package:comboreel/features/player/domain/playback_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -56,7 +58,7 @@ void main() {
     expect(episode.synopsis, 'A warning changes the plan.');
   });
 
-  test('offline catalogue ships original poster and hero artwork', () async {
+  test('offline catalogue ships documented poster and hero artwork', () async {
     const repository = OfflineCatalogueRepository();
     final series = await repository.latestSeries();
     expect(series, isNotEmpty);
@@ -66,6 +68,39 @@ void main() {
       ),
       isTrue,
     );
-    expect(series.first.heroUrl, 'assets/artwork/bound-by-a-secret-hero.jpg');
+    expect(
+      series.firstWhere((item) => item.id == 'demo-bound-by-a-secret').heroUrl,
+      'assets/artwork/bound-by-a-secret-hero.jpg',
+    );
+    expect(
+      series.firstWhere((item) => item.id == 'demo-sintel').heroUrl,
+      'assets/artwork/sintel-hero.jpg',
+    );
+  });
+
+  test('Sintel demo chapters cover the complete licensed master', () async {
+    const catalogue = OfflineCatalogueRepository();
+    const playback = OfflinePlaybackRepository();
+    final episodes = await catalogue.episodesForSeries('demo-sintel');
+
+    expect(episodes, hasLength(9));
+    expect(episodes.every((episode) => episode.isFree), isTrue);
+    expect(
+      episodes.fold<int>(
+        0,
+        (total, episode) => total + episode.durationSeconds,
+      ),
+      888,
+    );
+    expect(episodes.last.synopsis, contains('complete original'));
+
+    final first = await playback.createSession(episodes.first.id);
+    final last = await playback.createSession(episodes.last.id);
+    expect(first.format, PlaybackMediaFormat.mp4);
+    expect(first.clipStart, Duration.zero);
+    expect(first.clipEnd, const Duration(seconds: 101));
+    expect(last.clipStart, const Duration(seconds: 744));
+    expect(last.clipEnd, const Duration(seconds: 888));
+    expect(last.subtitles.single.vttUrl.scheme, 'asset');
   });
 }

@@ -30,3 +30,26 @@ release, the operator must confirm that use of generated content complies with
 the generator terms, store declarations, territorial rules, and internal brand
 approval. Keep this file, source prompts, commit SHA, and final binaries as the
 content-rights evidence bundle.
+
+## Licensed demo title
+
+`sintel-poster.jpg` and `sintel-hero.jpg` are unaltered-frame compositions
+extracted from the official *Sintel* master published by the Blender Foundation.
+The film, stills, and subtitles are reused under Creative Commons Attribution
+3.0. The official reuse terms permit commercial redistribution and require the
+complete film credit scroll when the film itself is screened. ComboReel keeps
+that scroll intact in episode 9 and identifies the adaptation in catalogue copy.
+
+- Creator: Blender Foundation / Durian Open Movie Project
+- Official project: https://durian.blender.org/
+- Official licence terms: https://durian.blender.org/sharing/
+- Licence: https://creativecommons.org/licenses/by/3.0/
+- Source master: `sintel-1024-surround.mp4`, 129,241,752 bytes
+- Source SHA-256: `1DC6F2CA9762DFCC7D1B1843129A3E4F351D1FE935DEA2241C7B359C11EBC1D8`
+- Adaptation notice: divided into nine playback chapters; vertical upload
+  masters add a blurred-background 9:16 canvas without cropping the original
+  widescreen frame.
+
+The Blender and Durian logos are not used. `tool/prepare_sintel_demo.ps1`
+reproduces the derived files and upload-ready episode masters from the official
+source.

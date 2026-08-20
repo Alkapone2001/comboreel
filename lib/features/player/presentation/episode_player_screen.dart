@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 
@@ -232,6 +233,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
         await _initializeVideo(
           session.hlsUrl!,
           selectedSubtitle,
+          session: session,
           generation: generation,
         );
       } else if (mounted && !refreshing) {
@@ -417,18 +419,28 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   }
 
   Future<void> _initializeVideo(
-    Uri hlsUrl,
+    Uri mediaUrl,
     SubtitleTrack? subtitle, {
+    PlaybackSession? session,
     int? generation,
   }) async {
     final previous = _videoController;
     final shouldPlay = previous?.value.isPlaying ?? true;
-    final resumeAt =
-        previous?.value.position ?? Duration(seconds: _positionSeconds);
+    final previousClipStart = _session?.clipStart ?? Duration.zero;
+    final resumeAt = previous == null
+        ? Duration(seconds: _positionSeconds)
+        : previous.value.position - previousClipStart;
+    final nextClipStart =
+        session?.clipStart ?? _session?.clipStart ?? Duration.zero;
+    final format =
+        session?.format ?? _session?.format ?? PlaybackMediaFormat.hls;
 
     final controller = VideoPlayerController.networkUrl(
-      hlsUrl,
-      formatHint: VideoFormat.hls,
+      mediaUrl,
+      formatHint: switch (format) {
+        PlaybackMediaFormat.hls => VideoFormat.hls,
+        PlaybackMediaFormat.mp4 => VideoFormat.other,
+      },
       closedCaptionFile: subtitle == null
           ? null
           : _loadCaptions(subtitle.vttUrl),
@@ -440,13 +452,16 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       return;
     }
     await controller.setLooping(false);
-    if (resumeAt > Duration.zero && resumeAt < controller.value.duration) {
-      await controller.seekTo(resumeAt);
+    final absoluteResumeAt = nextClipStart + resumeAt;
+    if (absoluteResumeAt > Duration.zero &&
+        absoluteResumeAt < controller.value.duration) {
+      await controller.seekTo(absoluteResumeAt);
     }
     if (previous != null) {
       previous.removeListener(_onVideoChanged);
       await previous.dispose();
     }
+    if (session != null) _session = session;
     _videoController = controller;
     controller.addListener(_onVideoChanged);
     if (shouldPlay) await controller.play();
@@ -459,6 +474,12 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   }
 
   Future<ClosedCaptionFile> _loadCaptions(Uri url) async {
+    if (url.scheme == 'asset') {
+      final assetPath = url.path.startsWith('/')
+          ? url.path.substring(1)
+          : url.path;
+      return WebVTTCaptionFile(await rootBundle.loadString(assetPath));
+    }
     final response = await http.get(url);
     if (response.statusCode != 200) {
       throw StateError('subtitle_download_failed');
@@ -481,7 +502,12 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       }
       return;
     }
-    final second = controller.value.position.inSeconds;
+    final clipStart = _session?.clipStart ?? Duration.zero;
+    final relativePosition = controller.value.position - clipStart;
+    final second = relativePosition.inSeconds.clamp(
+      0,
+      _effectiveDurationSeconds,
+    );
     if (!_scrubbing && second != _positionSeconds && mounted) {
       setState(() => _positionSeconds = second);
     }
@@ -489,8 +515,13 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       _lastPersistedSecond = second;
       unawaited(_saveProgress());
     }
-    if (controller.value.isCompleted && !_completionHandled) {
+    final clipEnd = _session?.clipEnd;
+    final reachedClipEnd =
+        clipEnd != null && controller.value.position >= clipEnd;
+    if ((controller.value.isCompleted || reachedClipEnd) &&
+        !_completionHandled) {
       _completionHandled = true;
+      unawaited(controller.pause());
       unawaited(_goToRelative(1, markCurrentCompleted: true));
     }
   }
@@ -513,8 +544,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     if (viewerId == null) return;
     final episode = _episode;
     final positionSeconds = _positionSeconds;
-    final duration =
-        _videoController?.value.duration.inSeconds ?? episode.durationSeconds;
+    final duration = _effectiveDurationSecondsFor(episode);
     final isCompleted =
         completed ?? (duration > 0 && positionSeconds >= duration - 3);
     try {
@@ -540,8 +570,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   }
 
   Future<void> _seekTo(double rawSeconds) async {
-    final duration =
-        _videoController?.value.duration.inSeconds ?? _episode.durationSeconds;
+    final duration = _effectiveDurationSeconds;
     if (duration <= 0) return;
     final target = rawSeconds.round().clamp(0, duration);
     _scrubbing = false;
@@ -549,7 +578,8 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     if (mounted) setState(() => _positionSeconds = target);
     final controller = _videoController;
     if (controller != null && controller.value.isInitialized) {
-      await controller.seekTo(Duration(seconds: target));
+      final clipStart = _session?.clipStart ?? Duration.zero;
+      await controller.seekTo(clipStart + Duration(seconds: target));
     }
     await _saveProgress(completed: target >= duration - 3);
   }
@@ -681,7 +711,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       _loading = true;
     });
     try {
-      await _initializeVideo(hlsUrl, track);
+      await _initializeVideo(hlsUrl, track, session: _session);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -732,8 +762,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   @override
   Widget build(BuildContext context) {
     final controller = _videoController;
-    final duration =
-        controller?.value.duration.inSeconds ?? _episode.durationSeconds;
+    final duration = _effectiveDurationSeconds;
     final seekValue = _positionSeconds.clamp(0, duration <= 0 ? 1 : duration);
     return Scaffold(
       backgroundColor: Colors.black,
@@ -954,6 +983,13 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
 
   String _formatDuration(int seconds) =>
       '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+
+  int get _effectiveDurationSeconds => _effectiveDurationSecondsFor(_episode);
+
+  int _effectiveDurationSecondsFor(CatalogueEpisode episode) =>
+      _session?.clipDuration?.inSeconds ??
+      _videoController?.value.duration.inSeconds ??
+      episode.durationSeconds;
 }
 
 class _VideoSurface extends StatelessWidget {
