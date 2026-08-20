@@ -30,6 +30,7 @@ class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
   final List<StreamSubscription<Uri>> _deepLinkSubscriptions = [];
   StreamSubscription<void>? _passwordRecoverySubscription;
+  bool _openingPlayer = false;
 
   @override
   void initState() {
@@ -169,6 +170,10 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openPlayer(CatalogueEpisode episode, {int positionSeconds = 0}) {
+    unawaited(_openPlayerFlow(episode, positionSeconds: positionSeconds));
+  }
+
+  void _trackPlayback(CatalogueEpisode episode, int positionSeconds) {
     unawaited(
       widget.services.analyticsRepository.track(
         'playback_started',
@@ -177,19 +182,40 @@ class _AppShellState extends State<AppShell> {
         properties: {'position_seconds': positionSeconds},
       ),
     );
+  }
+
+  Future<void> _openPlayerFlow(
+    CatalogueEpisode episode, {
+    required int positionSeconds,
+  }) async {
+    if (_openingPlayer) return;
+    _openingPlayer = true;
+    _trackPlayback(episode, positionSeconds);
+    var episodes = <CatalogueEpisode>[episode];
+    try {
+      final loaded = await widget.services.catalogueRepository
+          .episodesForSeries(episode.seriesId);
+      if (loaded.isNotEmpty) episodes = loaded;
+    } catch (_) {
+      // A playable deep link should still open when queue loading is unavailable.
+    }
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => EpisodePlayerScreen(
           episode: episode,
+          episodes: episodes,
           initialPositionSeconds: positionSeconds,
           viewerLibraryRepository: widget.services.viewerLibraryRepository,
           playbackRepository: widget.services.playbackRepository,
           viewerId: _viewerId,
           contentShareService: widget.services.contentShareService,
           preferencesRepository: widget.services.viewerPreferencesRepository,
+          onEpisodeChanged: (next) => _trackPlayback(next, 0),
         ),
       ),
     );
+    _openingPlayer = false;
   }
 
   Future<void> _openSeriesPlayer(DramaSeries series) async {

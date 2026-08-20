@@ -19,18 +19,22 @@ class EpisodePlayerScreen extends StatefulWidget {
     required this.viewerLibraryRepository,
     required this.playbackRepository,
     required this.viewerId,
+    this.episodes = const [],
     this.initialPositionSeconds = 0,
     this.contentShareService = const NoopContentShareService(),
     this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
+    this.onEpisodeChanged,
   });
 
   final CatalogueEpisode episode;
   final ViewerLibraryRepository viewerLibraryRepository;
   final PlaybackRepository playbackRepository;
   final String? viewerId;
+  final List<CatalogueEpisode> episodes;
   final int initialPositionSeconds;
   final ContentShareService contentShareService;
   final ViewerPreferencesRepository preferencesRepository;
+  final ValueChanged<CatalogueEpisode>? onEpisodeChanged;
 
   @override
   State<EpisodePlayerScreen> createState() => _EpisodePlayerScreenState();
@@ -43,18 +47,43 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   bool _demoPlaying = true;
   bool _isLiked = false;
   bool _loading = true;
+  bool _transitioning = false;
+  bool _completionHandled = false;
   String? _error;
+  late final List<CatalogueEpisode> _episodes;
+  late CatalogueEpisode _episode;
   late int _positionSeconds;
   int _lastPersistedSecond = -1;
+  int _loadGeneration = 0;
 
   bool get _isPlaying => _videoController?.value.isPlaying ?? _demoPlaying;
 
   @override
   void initState() {
     super.initState();
+    _episode = widget.episode;
+    _episodes =
+        [
+          ...widget.episodes.where(
+            (item) => item.seriesId == widget.episode.seriesId,
+          ),
+        ]..sort((left, right) {
+          final season = (left.seasonNumber ?? 0).compareTo(
+            right.seasonNumber ?? 0,
+          );
+          return season != 0
+              ? season
+              : left.episodeNumber.compareTo(right.episodeNumber);
+        });
+    if (!_episodes.any((item) => item.id == _episode.id)) {
+      _episodes.add(_episode);
+      _episodes.sort(
+        (left, right) => left.episodeNumber.compareTo(right.episodeNumber),
+      );
+    }
     _positionSeconds = widget.initialPositionSeconds.clamp(
       0,
-      widget.episode.durationSeconds,
+      _episode.durationSeconds,
     );
     unawaited(_loadSession());
     unawaited(_loadFavourite());
@@ -67,7 +96,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
       viewerId,
     );
     if (mounted) {
-      setState(() => _isLiked = favourites.contains(widget.episode.seriesId));
+      setState(() => _isLiked = favourites.contains(_episode.seriesId));
     }
   }
 
@@ -85,12 +114,12 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
       if (next) {
         await widget.viewerLibraryRepository.addFavourite(
           userId: viewerId,
-          seriesId: widget.episode.seriesId,
+          seriesId: _episode.seriesId,
         );
       } else {
         await widget.viewerLibraryRepository.removeFavourite(
           userId: viewerId,
-          seriesId: widget.episode.seriesId,
+          seriesId: _episode.seriesId,
         );
       }
     } catch (_) {
@@ -101,23 +130,24 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   Future<void> _share() async {
     final box = context.findRenderObject() as RenderBox?;
     await widget.contentShareService.share(
-      title: widget.episode.seriesTitle == null
-          ? 'Watch Episode ${widget.episode.episodeNumber} on ComboReel'
-          : 'Watch ${widget.episode.seriesTitle} on ComboReel',
+      title: _episode.seriesTitle == null
+          ? 'Watch Episode ${_episode.episodeNumber} on ComboReel'
+          : 'Watch ${_episode.seriesTitle} on ComboReel',
       deepLink: Uri(
         scheme: 'comboreel',
         host: 'series',
-        pathSegments: [widget.episode.seriesId, 'episode', widget.episode.id],
+        pathSegments: [_episode.seriesId, 'episode', _episode.id],
       ),
       origin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
     );
   }
 
   Future<void> _loadSession() async {
+    final generation = ++_loadGeneration;
+    final episode = _episode;
     try {
-      final session = await widget.playbackRepository.createSession(
-        widget.episode.id,
-      );
+      final session = await widget.playbackRepository.createSession(episode.id);
+      if (!mounted || generation != _loadGeneration) return;
       _session = session;
       final preferredLanguage = await widget.preferencesRepository
           .preferredSubtitleLanguage();
@@ -128,19 +158,23 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
           .where((track) => track.isDefault)
           .firstOrNull;
       if (session.hlsUrl != null) {
-        await _initializeVideo(session.hlsUrl!, _selectedSubtitle);
+        await _initializeVideo(
+          session.hlsUrl!,
+          _selectedSubtitle,
+          generation: generation,
+        );
       } else if (mounted) {
         setState(() => _loading = false);
       }
     } on PlaybackAccessException catch (error) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() {
           _loading = false;
           _error = error.code;
         });
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() {
           _loading = false;
           _error = 'playback_unavailable';
@@ -149,7 +183,11 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
     }
   }
 
-  Future<void> _initializeVideo(Uri hlsUrl, SubtitleTrack? subtitle) async {
+  Future<void> _initializeVideo(
+    Uri hlsUrl,
+    SubtitleTrack? subtitle, {
+    int? generation,
+  }) async {
     final previous = _videoController;
     final shouldPlay = previous?.value.isPlaying ?? true;
     final resumeAt =
@@ -169,6 +207,10 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
     );
     _videoController = controller;
     await controller.initialize();
+    if (!mounted || (generation != null && generation != _loadGeneration)) {
+      await controller.dispose();
+      return;
+    }
     await controller.setLooping(false);
     if (resumeAt > Duration.zero && resumeAt < controller.value.duration) {
       await controller.seekTo(resumeAt);
@@ -202,6 +244,10 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
       _lastPersistedSecond = second;
       unawaited(_saveProgress());
     }
+    if (controller.value.isCompleted && !_completionHandled) {
+      _completionHandled = true;
+      unawaited(_goToRelative(1, markCurrentCompleted: true));
+    }
   }
 
   @override
@@ -215,17 +261,120 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
     super.dispose();
   }
 
-  Future<void> _saveProgress() async {
+  Future<void> _saveProgress({bool? completed}) async {
     final viewerId = widget.viewerId;
     if (viewerId == null) return;
     final duration =
-        _videoController?.value.duration.inSeconds ??
-        widget.episode.durationSeconds;
-    await widget.viewerLibraryRepository.saveProgress(
-      userId: viewerId,
-      episodeId: widget.episode.id,
-      positionSeconds: _positionSeconds,
-      completed: duration > 0 && _positionSeconds >= duration - 3,
+        _videoController?.value.duration.inSeconds ?? _episode.durationSeconds;
+    try {
+      await widget.viewerLibraryRepository.saveProgress(
+        userId: viewerId,
+        episodeId: _episode.id,
+        positionSeconds: _positionSeconds,
+        completed:
+            completed ?? (duration > 0 && _positionSeconds >= duration - 3),
+      );
+    } catch (_) {
+      // Playback remains available when a best-effort progress write is offline.
+    }
+  }
+
+  int get _currentIndex =>
+      _episodes.indexWhere((item) => item.id == _episode.id);
+
+  Future<void> _goToRelative(
+    int offset, {
+    bool markCurrentCompleted = false,
+  }) async {
+    final target = _currentIndex + offset;
+    if (target < 0 || target >= _episodes.length) {
+      if (markCurrentCompleted) await _saveProgress(completed: true);
+      if (mounted && offset > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You reached the latest episode.')),
+        );
+      }
+      return;
+    }
+    await _goToIndex(target, markCurrentCompleted: markCurrentCompleted);
+  }
+
+  Future<void> _goToIndex(
+    int index, {
+    bool markCurrentCompleted = false,
+  }) async {
+    if (_transitioning || index == _currentIndex) return;
+    setState(() => _transitioning = true);
+    _loadGeneration++;
+    await _saveProgress(completed: markCurrentCompleted ? true : null);
+    final controller = _videoController;
+    _videoController = null;
+    if (controller != null) {
+      controller.removeListener(_onVideoChanged);
+      await controller.dispose();
+    }
+    if (!mounted) return;
+    setState(() {
+      _episode = _episodes[index];
+      _session = null;
+      _selectedSubtitle = null;
+      _positionSeconds = 0;
+      _lastPersistedSecond = -1;
+      _completionHandled = false;
+      _demoPlaying = true;
+      _loading = true;
+      _error = null;
+    });
+    widget.onEpisodeChanged?.call(_episode);
+    await _loadSession();
+    if (mounted) setState(() => _transitioning = false);
+  }
+
+  void _handleVerticalDrag(DragEndDetails details) {
+    if (_loading || _transitioning) return;
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity < -350) {
+      unawaited(_goToRelative(1));
+    } else if (velocity > 350) {
+      unawaited(_goToRelative(-1));
+    }
+  }
+
+  void _showEpisodeQueue() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView.builder(
+          itemCount: _episodes.length,
+          itemBuilder: (context, index) {
+            final episode = _episodes[index];
+            final selected = episode.id == _episode.id;
+            return ListTile(
+              key: ValueKey('episode-option-${episode.id}'),
+              selected: selected,
+              leading: Icon(
+                selected
+                    ? Icons.play_circle_fill_rounded
+                    : Icons.play_circle_outline_rounded,
+              ),
+              title: Text(
+                'Episode ${episode.episodeNumber} • ${episode.title}',
+              ),
+              subtitle: episode.seasonNumber == null
+                  ? null
+                  : Text('Season ${episode.seasonNumber}'),
+              trailing: episode.isFree ? const Text('FREE') : null,
+              onTap: selected
+                  ? () => Navigator.pop(context)
+                  : () {
+                      Navigator.pop(context);
+                      unawaited(_goToIndex(index));
+                    },
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -308,152 +457,185 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   Widget build(BuildContext context) {
     final controller = _videoController;
     final duration =
-        controller?.value.duration.inSeconds ?? widget.episode.durationSeconds;
+        controller?.value.duration.inSeconds ?? _episode.durationSeconds;
     final fraction = duration <= 0
         ? 0.0
         : (_positionSeconds / duration).clamp(0.0, 1.0);
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          _VideoSurface(controller: controller),
-          if (_loading) const Center(child: CircularProgressIndicator()),
-          if (_error != null)
-            _PlaybackError(code: _error!, onRetry: _loadSession),
-          if (!_loading && _error == null)
-            Center(
-              child: IconButton.filledTonal(
-                onPressed: _togglePlayback,
-                iconSize: 42,
-                icon: Icon(
-                  _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                ),
-                tooltip: _isPlaying ? 'Pause' : 'Play',
-              ),
-            ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      IconButton.filledTonal(
-                        onPressed: _close,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        tooltip: 'Close player',
-                      ),
-                      const Spacer(),
-                      _EpisodeChip(number: widget.episode.episodeNumber),
-                      const Spacer(),
-                      IconButton.filledTonal(
-                        onPressed: _showSubtitles,
-                        icon: const Icon(Icons.closed_caption_rounded),
-                        tooltip: 'Subtitles',
-                      ),
-                    ],
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragEnd: _handleVerticalDrag,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _VideoSurface(controller: controller),
+            if (_loading) const Center(child: CircularProgressIndicator()),
+            if (_error != null)
+              _PlaybackError(code: _error!, onRetry: _loadSession),
+            if (!_loading && _error == null)
+              Center(
+                child: IconButton.filledTonal(
+                  onPressed: _togglePlayback,
+                  iconSize: 42,
+                  icon: Icon(
+                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                   ),
-                  const Spacer(),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
+                  tooltip: _isPlaying ? 'Pause' : 'Play',
+                ),
+              ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        IconButton.filledTonal(
+                          onPressed: _close,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          tooltip: 'Close player',
+                        ),
+                        const Spacer(),
+                        _EpisodeChip(
+                          number: _episode.episodeNumber,
+                          total: _episodes.length >= _episode.episodeNumber
+                              ? _episodes.length
+                              : null,
+                        ),
+                        const Spacer(),
+                        IconButton.filledTonal(
+                          onPressed: _showSubtitles,
+                          icon: const Icon(Icons.closed_caption_rounded),
+                          tooltip: 'Subtitles',
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _episode.seriesTitle ?? 'ComboReel Original',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                'Episode ${_episode.episodeNumber} • ${_episode.title}',
+                                style: const TextStyle(
+                                  color: Color(0xFFD0D0D6),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                _episode.synopsis.isEmpty
+                                    ? 'Keep watching to discover what happens next.'
+                                    : _episode.synopsis,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.muted,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              widget.episode.seriesTitle ??
-                                  'ComboReel Original',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                              ),
+                            _PlayerAction(
+                              icon: _isLiked
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              label: _isLiked ? 'Saved' : 'Save',
+                              color: _isLiked ? AppColors.coral : Colors.white,
+                              onTap: _toggleFavourite,
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'Episode ${widget.episode.episodeNumber} • ${widget.episode.title}',
-                              style: const TextStyle(color: Color(0xFFD0D0D6)),
+                            _PlayerAction(
+                              icon: Icons.ios_share_rounded,
+                              label: 'Share',
+                              onTap: _share,
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              widget.episode.synopsis.isEmpty
-                                  ? 'Keep watching to discover what happens next.'
-                                  : widget.episode.synopsis,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.muted,
-                                height: 1.4,
-                              ),
+                            _PlayerAction(
+                              icon: Icons.list_rounded,
+                              label: 'Episodes',
+                              onTap: _showEpisodeQueue,
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    LinearProgressIndicator(
+                      value: fraction,
+                      minHeight: 3,
+                      color: AppColors.coral,
+                      backgroundColor: Colors.white24,
+                    ),
+                    const SizedBox(height: 12),
+                    if (_episodes.length > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _PlayerAction(
-                            icon: _isLiked
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            label: _isLiked ? 'Saved' : 'Save',
-                            color: _isLiked ? AppColors.coral : Colors.white,
-                            onTap: _toggleFavourite,
+                          Icon(
+                            _currentIndex < _episodes.length - 1
+                                ? Icons.keyboard_arrow_up_rounded
+                                : Icons.keyboard_arrow_down_rounded,
+                            size: 18,
+                            color: AppColors.muted,
                           ),
-                          _PlayerAction(
-                            icon: Icons.ios_share_rounded,
-                            label: 'Share',
-                            onTap: _share,
-                          ),
-                          _PlayerAction(
-                            icon: Icons.list_rounded,
-                            label: 'Episodes',
-                            onTap: _close,
+                          Text(
+                            _currentIndex < _episodes.length - 1
+                                ? 'Swipe up for next episode'
+                                : 'Swipe down for previous episode',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.muted,
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  LinearProgressIndicator(
-                    value: fraction,
-                    minHeight: 3,
-                    color: AppColors.coral,
-                    backgroundColor: Colors.white24,
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Semantics(
-                      label:
-                          'Playback position ${_formatDuration(_positionSeconds)}',
-                      child: Text(
-                        _formatDuration(_positionSeconds),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.muted,
+                    if (_episodes.length > 1) const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Semantics(
+                        label:
+                            'Playback position ${_formatDuration(_positionSeconds)}',
+                        child: Text(
+                          _formatDuration(_positionSeconds),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.muted,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  if (controller?.value.caption.text case final caption?
-                      when caption.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                    if (controller?.value.caption.text case final caption?
+                        when caption.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        color: Colors.black87,
+                        child: Text(caption, textAlign: TextAlign.center),
                       ),
-                      color: Colors.black87,
-                      child: Text(caption, textAlign: TextAlign.center),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -533,8 +715,9 @@ class _PlaybackError extends StatelessWidget {
 }
 
 class _EpisodeChip extends StatelessWidget {
-  const _EpisodeChip({required this.number});
+  const _EpisodeChip({required this.number, this.total});
   final int number;
+  final int? total;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -544,7 +727,7 @@ class _EpisodeChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(99),
     ),
     child: Text(
-      'EP $number / 42',
+      total == null ? 'EP $number' : 'EP $number / $total',
       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
     ),
   );
@@ -563,19 +746,38 @@ class _PlayerAction extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 14),
-    child: Column(
-      children: [
-        IconButton.filledTonal(
-          onPressed: onTap,
-          icon: Icon(icon, color: color),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
+          child: Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-        ),
-      ],
+      ),
     ),
   );
 }

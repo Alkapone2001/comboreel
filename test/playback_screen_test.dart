@@ -72,6 +72,52 @@ void main() {
 
     expect(group.groupValue?.languageCode, 'es');
   });
+
+  testWidgets('vertical swipe advances the queue and persists progress', (
+    tester,
+  ) async {
+    final library = _NoopLibrary();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          episodes: const [episode, nextEpisode],
+          viewerLibraryRepository: library,
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('EP 6'), findsOneWidget);
+    expect(find.textContaining('Episode 6 • The Warning'), findsOneWidget);
+
+    await tester.fling(find.byType(Scaffold), const Offset(0, -600), 1200);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Episode 7 • The Discovery'), findsOneWidget);
+    expect(library.savedEpisodeIds, contains('episode-6'));
+
+    await tester.tap(find.text('Episodes'));
+    await tester.pumpAndSettle();
+    final previousOption = find.byKey(
+      const ValueKey('episode-option-episode-6'),
+      skipOffstage: false,
+    );
+    expect(previousOption, findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey('episode-option-episode-7'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(previousOption);
+    await tester.tap(previousOption);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Episode 6 • The Warning'), findsOneWidget);
+  });
 }
 
 const episode = CatalogueEpisode(
@@ -80,6 +126,17 @@ const episode = CatalogueEpisode(
   episodeNumber: 6,
   title: 'The Warning',
   durationSeconds: 90,
+  thumbnailUrl: null,
+  isFree: false,
+  coinPrice: 5,
+);
+
+const nextEpisode = CatalogueEpisode(
+  id: 'episode-7',
+  seriesId: 'series-1',
+  episodeNumber: 7,
+  title: 'The Discovery',
+  durationSeconds: 95,
   thumbnailUrl: null,
   isFree: false,
   coinPrice: 5,
@@ -138,6 +195,8 @@ class _MultipleSubtitlePlaybackRepository implements PlaybackRepository {
 }
 
 class _NoopLibrary implements ViewerLibraryRepository {
+  final List<String> savedEpisodeIds = [];
+
   @override
   Future<void> addFavourite({
     required String userId,
@@ -161,5 +220,5 @@ class _NoopLibrary implements ViewerLibraryRepository {
     required String episodeId,
     required int positionSeconds,
     required bool completed,
-  }) async {}
+  }) async => savedEpisodeIds.add(episodeId);
 }
