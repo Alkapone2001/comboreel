@@ -135,6 +135,68 @@ void main() {
     expect(library.savedEpisodeIds, contains('episode-6'));
   });
 
+  testWidgets('expiring playback session refreshes before it expires', (
+    tester,
+  ) async {
+    final playback = _ExpiringPlaybackRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: playback,
+          preferencesRepository: OfflineViewerPreferencesRepository(
+            initialLanguage: 'es',
+          ),
+          viewerId: 'viewer',
+          sessionRefreshLeadTime: const Duration(seconds: 30),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(playback.requests, 1);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+
+    expect(playback.requests, 2);
+    expect(find.text('Video could not load'), findsNothing);
+    await tester.tap(find.byTooltip('Subtitles'));
+    await tester.pumpAndSettle();
+    final group = tester.widget<RadioGroup<SubtitleTrack?>>(
+      find.byType(RadioGroup<SubtitleTrack?>),
+    );
+    expect(group.groupValue?.languageCode, 'es');
+  });
+
+  testWidgets('failed session refresh retries without interrupting playback', (
+    tester,
+  ) async {
+    final playback = _RetryingRefreshPlaybackRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: playback,
+          viewerId: 'viewer',
+          sessionRefreshLeadTime: const Duration(seconds: 30),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(playback.requests, 2);
+    expect(find.text('Video could not load'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+    expect(playback.requests, 3);
+    expect(find.text('Video could not load'), findsNothing);
+  });
+
   testWidgets('seek control updates and persists playback position', (
     tester,
   ) async {
@@ -360,6 +422,52 @@ class _EntitlementPlaybackRepository implements PlaybackRepository {
       throw const PlaybackAccessException('episode_locked');
     }
     return const PlaybackSession(hlsUrl: null, expiresAt: null, subtitles: []);
+  }
+}
+
+class _ExpiringPlaybackRepository implements PlaybackRepository {
+  int requests = 0;
+
+  @override
+  Future<PlaybackSession> createSession(String episodeId) async {
+    requests++;
+    return PlaybackSession(
+      hlsUrl: null,
+      expiresAt: requests == 1
+          ? DateTime.now().toUtc().add(const Duration(seconds: 31))
+          : null,
+      subtitles: [
+        SubtitleTrack(
+          languageCode: 'en',
+          label: 'English',
+          vttUrl: Uri.parse('https://example.com/en.vtt'),
+          isDefault: true,
+        ),
+        SubtitleTrack(
+          languageCode: 'es',
+          label: 'Spanish',
+          vttUrl: Uri.parse('https://example.com/es.vtt'),
+          isDefault: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _RetryingRefreshPlaybackRepository implements PlaybackRepository {
+  int requests = 0;
+
+  @override
+  Future<PlaybackSession> createSession(String episodeId) async {
+    requests++;
+    if (requests == 2) throw StateError('temporary_network_failure');
+    return PlaybackSession(
+      hlsUrl: null,
+      expiresAt: requests == 1
+          ? DateTime.now().toUtc().add(const Duration(seconds: 31))
+          : null,
+      subtitles: const [],
+    );
   }
 }
 

@@ -30,6 +30,7 @@ class EpisodePlayerScreen extends StatefulWidget {
     this.monetizationRepository,
     this.rewardedAdService = const UnavailableRewardedAdService(),
     this.analyticsRepository = const NoopAnalyticsRepository(),
+    this.sessionRefreshLeadTime = const Duration(seconds: 30),
     this.onEpisodeChanged,
   });
 
@@ -44,6 +45,7 @@ class EpisodePlayerScreen extends StatefulWidget {
   final MonetizationRepository? monetizationRepository;
   final RewardedAdService rewardedAdService;
   final AnalyticsRepository analyticsRepository;
+  final Duration sessionRefreshLeadTime;
   final ValueChanged<CatalogueEpisode>? onEpisodeChanged;
 
   @override
@@ -63,7 +65,9 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   bool _resumeAfterBackground = false;
   bool _scrubbing = false;
   bool _unlocking = false;
+  bool _refreshingSession = false;
   String? _error;
+  Timer? _sessionRefreshTimer;
   late final List<CatalogueEpisode> _episodes;
   late CatalogueEpisode _episode;
   late int _positionSeconds;
@@ -195,44 +199,98 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     );
   }
 
-  Future<void> _loadSession() async {
+  Future<void> _loadSession({bool refreshing = false}) async {
+    _sessionRefreshTimer?.cancel();
     final generation = ++_loadGeneration;
     final episode = _episode;
     try {
       final session = await widget.playbackRepository.createSession(episode.id);
       if (!mounted || generation != _loadGeneration) return;
-      _session = session;
-      final preferredLanguage = await widget.preferencesRepository
-          .preferredSubtitleLanguage();
-      _selectedSubtitle = session.subtitles
-          .where((track) => track.languageCode == preferredLanguage)
-          .firstOrNull;
-      _selectedSubtitle ??= session.subtitles
-          .where((track) => track.isDefault)
-          .firstOrNull;
+      SubtitleTrack? selectedSubtitle;
+      if (refreshing) {
+        final activeLanguage = _selectedSubtitle?.languageCode;
+        selectedSubtitle = activeLanguage == null
+            ? null
+            : session.subtitles
+                  .where((track) => track.languageCode == activeLanguage)
+                  .firstOrNull;
+        selectedSubtitle ??= activeLanguage == null
+            ? null
+            : session.subtitles.where((track) => track.isDefault).firstOrNull;
+      } else {
+        final preferredLanguage = await widget.preferencesRepository
+            .preferredSubtitleLanguage();
+        selectedSubtitle = session.subtitles
+            .where((track) => track.languageCode == preferredLanguage)
+            .firstOrNull;
+        selectedSubtitle ??= session.subtitles
+            .where((track) => track.isDefault)
+            .firstOrNull;
+      }
       if (session.hlsUrl != null) {
         await _initializeVideo(
           session.hlsUrl!,
-          _selectedSubtitle,
+          selectedSubtitle,
           generation: generation,
         );
-      } else if (mounted) {
+      } else if (mounted && !refreshing) {
         setState(() => _loading = false);
       }
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _session = session;
+        _selectedSubtitle = selectedSubtitle;
+      });
+      _scheduleSessionRefresh(session);
     } on PlaybackAccessException catch (error) {
-      if (mounted && generation == _loadGeneration) {
+      if (refreshing) {
+        _scheduleRefreshRetry(generation);
+      } else if (mounted && generation == _loadGeneration) {
         setState(() {
           _loading = false;
           _error = error.code;
         });
       }
     } catch (_) {
-      if (mounted && generation == _loadGeneration) {
+      if (refreshing) {
+        _scheduleRefreshRetry(generation);
+      } else if (mounted && generation == _loadGeneration) {
         setState(() {
           _loading = false;
           _error = 'playback_unavailable';
         });
       }
+    }
+  }
+
+  void _scheduleSessionRefresh(PlaybackSession session) {
+    final expiresAt = session.expiresAt;
+    if (expiresAt == null || !mounted) return;
+    final refreshAt = expiresAt.subtract(widget.sessionRefreshLeadTime);
+    final delay = refreshAt.difference(DateTime.now().toUtc());
+    _sessionRefreshTimer = Timer(
+      delay > Duration.zero ? delay : const Duration(seconds: 1),
+      () => unawaited(_refreshSession()),
+    );
+  }
+
+  void _scheduleRefreshRetry(int generation) {
+    if (!mounted || generation != _loadGeneration) return;
+    _sessionRefreshTimer = Timer(
+      const Duration(seconds: 5),
+      () => unawaited(_refreshSession()),
+    );
+  }
+
+  Future<void> _refreshSession() async {
+    if (_refreshingSession || _transitioning || _error != null || !mounted) {
+      return;
+    }
+    _refreshingSession = true;
+    try {
+      await _loadSession(refreshing: true);
+    } finally {
+      _refreshingSession = false;
     }
   }
 
@@ -366,10 +424,6 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     final shouldPlay = previous?.value.isPlaying ?? true;
     final resumeAt =
         previous?.value.position ?? Duration(seconds: _positionSeconds);
-    if (previous != null) {
-      previous.removeListener(_onVideoChanged);
-      await previous.dispose();
-    }
 
     final controller = VideoPlayerController.networkUrl(
       hlsUrl,
@@ -379,7 +433,6 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
           : _loadCaptions(subtitle.vttUrl),
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
     );
-    _videoController = controller;
     await controller.initialize();
     if (!mounted || (generation != null && generation != _loadGeneration)) {
       await controller.dispose();
@@ -389,6 +442,11 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     if (resumeAt > Duration.zero && resumeAt < controller.value.duration) {
       await controller.seekTo(resumeAt);
     }
+    if (previous != null) {
+      previous.removeListener(_onVideoChanged);
+      await previous.dispose();
+    }
+    _videoController = controller;
     controller.addListener(_onVideoChanged);
     if (shouldPlay) await controller.play();
     if (mounted) {
@@ -439,6 +497,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _sessionRefreshTimer?.cancel();
     final controller = _videoController;
     if (controller != null) {
       controller.removeListener(_onVideoChanged);
@@ -507,6 +566,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   }) async {
     if (_transitioning || index == _currentIndex) return;
     setState(() => _transitioning = true);
+    _sessionRefreshTimer?.cancel();
     _loadGeneration++;
     await _saveProgress(completed: markCurrentCompleted ? true : null);
     final controller = _videoController;
