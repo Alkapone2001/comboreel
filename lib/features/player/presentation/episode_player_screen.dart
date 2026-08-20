@@ -6,8 +6,10 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/content_share_service.dart';
+import '../../analytics/data/analytics_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../library/data/viewer_library_repository.dart';
+import '../../monetization/data/monetization_repository.dart';
 import '../../preferences/data/viewer_preferences_repository.dart';
 import '../data/playback_repository.dart';
 import '../domain/playback_session.dart';
@@ -23,6 +25,8 @@ class EpisodePlayerScreen extends StatefulWidget {
     this.initialPositionSeconds = 0,
     this.contentShareService = const NoopContentShareService(),
     this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
+    this.monetizationRepository,
+    this.analyticsRepository = const NoopAnalyticsRepository(),
     this.onEpisodeChanged,
   });
 
@@ -34,6 +38,8 @@ class EpisodePlayerScreen extends StatefulWidget {
   final int initialPositionSeconds;
   final ContentShareService contentShareService;
   final ViewerPreferencesRepository preferencesRepository;
+  final MonetizationRepository? monetizationRepository;
+  final AnalyticsRepository analyticsRepository;
   final ValueChanged<CatalogueEpisode>? onEpisodeChanged;
 
   @override
@@ -52,6 +58,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   bool _completionHandled = false;
   bool _resumeAfterBackground = false;
   bool _scrubbing = false;
+  bool _unlocking = false;
   String? _error;
   late final List<CatalogueEpisode> _episodes;
   late CatalogueEpisode _episode;
@@ -234,6 +241,50 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     await _saveProgress();
     if (!mounted) return;
     await _loadSession();
+  }
+
+  Future<void> _unlockWithCoins() async {
+    final monetization = widget.monetizationRepository;
+    if (monetization == null || _unlocking) return;
+    if (widget.viewerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to unlock episodes with coins.')),
+      );
+      return;
+    }
+    setState(() => _unlocking = true);
+    try {
+      final result = await monetization.unlockEpisodeWithCoins(
+        episodeId: _episode.id,
+        idempotencyKey:
+            '${_episode.id}-${DateTime.now().microsecondsSinceEpoch}',
+      );
+      if (result.accessGranted) {
+        unawaited(
+          widget.analyticsRepository.track(
+            'coin_unlock_completed',
+            seriesId: _episode.seriesId,
+            episodeId: _episode.id,
+            properties: const {'method': 'coins'},
+          ),
+        );
+        await _retrySession();
+      }
+    } on InsufficientCoinsException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You do not have enough coins.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The episode could not be unlocked.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _unlocking = false);
+    }
   }
 
   Future<void> _initializeVideo(
@@ -554,6 +605,13 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
               _PlaybackError(
                 code: _error!,
                 onRetry: () => unawaited(_retrySession()),
+                coinPrice: _episode.coinPrice,
+                unlocking: _unlocking,
+                onUnlock:
+                    _error == 'episode_locked' &&
+                        widget.monetizationRepository != null
+                    ? () => unawaited(_unlockWithCoins())
+                    : null,
               ),
             if (!_loading && _error == null)
               Center(
@@ -778,9 +836,18 @@ class _VideoSurface extends StatelessWidget {
 }
 
 class _PlaybackError extends StatelessWidget {
-  const _PlaybackError({required this.code, required this.onRetry});
+  const _PlaybackError({
+    required this.code,
+    required this.onRetry,
+    required this.coinPrice,
+    required this.unlocking,
+    this.onUnlock,
+  });
   final String code;
   final VoidCallback onRetry;
+  final int coinPrice;
+  final bool unlocking;
+  final VoidCallback? onUnlock;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -814,8 +881,23 @@ class _PlaybackError extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
+          if (onUnlock != null) ...[
+            FilledButton.icon(
+              onPressed: unlocking ? null : onUnlock,
+              icon: unlocking
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.monetization_on_rounded),
+              label: Text(
+                unlocking ? 'Unlocking…' : 'Unlock with $coinPrice coins',
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           OutlinedButton.icon(
-            onPressed: onRetry,
+            onPressed: unlocking ? null : onRetry,
             icon: const Icon(Icons.refresh_rounded),
             label: const Text('Try again'),
           ),

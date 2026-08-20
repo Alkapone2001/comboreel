@@ -279,14 +279,6 @@ class SeriesDetailScreen extends StatelessWidget {
       }
     } on InsufficientCoinsException {
       if (sheetContext.mounted) {
-        unawaited(
-          analyticsRepository.track(
-            'rewarded_unlock_completed',
-            seriesId: episode.seriesId,
-            episodeId: episode.id,
-            properties: const {'method': 'rewarded_ad'},
-          ),
-        );
         ScaffoldMessenger.of(sheetContext).showSnackBar(
           const SnackBar(content: Text('You do not have enough coins.')),
         );

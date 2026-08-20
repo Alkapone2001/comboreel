@@ -1,6 +1,7 @@
 import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/library/data/viewer_library_repository.dart';
 import 'package:comboreel/features/library/domain/viewer_progress.dart';
+import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
 import 'package:comboreel/features/player/data/playback_repository.dart';
 import 'package:comboreel/features/player/domain/playback_session.dart';
 import 'package:comboreel/features/player/presentation/episode_player_screen.dart';
@@ -46,6 +47,33 @@ void main() {
 
     expect(find.text('This episode is locked'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
+  });
+
+  testWidgets('locked player spends coins and retries the same episode', (
+    tester,
+  ) async {
+    final monetization = OfflineMonetizationRepository();
+    final playback = _EntitlementPlaybackRepository(monetization);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: playback,
+          monetizationRepository: monetization,
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('This episode is locked'), findsOneWidget);
+    await tester.tap(find.text('Unlock with 5 coins'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('This episode is locked'), findsNothing);
+    expect(playback.requests, 2);
+    expect((await monetization.wallet('viewer')).balance, 20);
   });
 
   testWidgets('failed session retries without losing the resume position', (
@@ -286,6 +314,22 @@ class _RecoveringPlaybackRepository implements PlaybackRepository {
   Future<PlaybackSession> createSession(String episodeId) async {
     requests++;
     if (requests == 1) throw StateError('network_unavailable');
+    return const PlaybackSession(hlsUrl: null, expiresAt: null, subtitles: []);
+  }
+}
+
+class _EntitlementPlaybackRepository implements PlaybackRepository {
+  _EntitlementPlaybackRepository(this.monetization);
+
+  final OfflineMonetizationRepository monetization;
+  int requests = 0;
+
+  @override
+  Future<PlaybackSession> createSession(String episodeId) async {
+    requests++;
+    if (!await monetization.hasEpisodeAccess(episodeId)) {
+      throw const PlaybackAccessException('episode_locked');
+    }
     return const PlaybackSession(hlsUrl: null, expiresAt: null, subtitles: []);
   }
 }
