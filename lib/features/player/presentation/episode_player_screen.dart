@@ -40,7 +40,8 @@ class EpisodePlayerScreen extends StatefulWidget {
   State<EpisodePlayerScreen> createState() => _EpisodePlayerScreenState();
 }
 
-class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
+class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
+    with WidgetsBindingObserver {
   VideoPlayerController? _videoController;
   PlaybackSession? _session;
   SubtitleTrack? _selectedSubtitle;
@@ -49,6 +50,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   bool _loading = true;
   bool _transitioning = false;
   bool _completionHandled = false;
+  bool _resumeAfterBackground = false;
   String? _error;
   late final List<CatalogueEpisode> _episodes;
   late CatalogueEpisode _episode;
@@ -61,6 +63,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _episode = widget.episode;
     _episodes =
         [
@@ -87,6 +90,44 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
     );
     unawaited(_loadSession());
     unawaited(_loadFavourite());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _pauseForBackground();
+      case AppLifecycleState.resumed:
+        _resumeFromBackground();
+    }
+  }
+
+  void _pauseForBackground() {
+    if (_resumeAfterBackground) return;
+    final controller = _videoController;
+    _resumeAfterBackground = controller?.value.isPlaying ?? _demoPlaying;
+    if (controller != null) {
+      unawaited(controller.pause());
+    } else {
+      _demoPlaying = false;
+    }
+    unawaited(_saveProgress());
+    if (mounted) setState(() {});
+  }
+
+  void _resumeFromBackground() {
+    if (!_resumeAfterBackground) return;
+    _resumeAfterBackground = false;
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) {
+      unawaited(controller.play());
+    } else if (_error == null) {
+      _demoPlaying = true;
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadFavourite() async {
@@ -252,6 +293,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     final controller = _videoController;
     if (controller != null) {
       controller.removeListener(_onVideoChanged);

@@ -118,6 +118,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Episode 6 • The Warning'), findsOneWidget);
   });
+
+  testWidgets('backgrounding pauses, persists, and resumes active playback', (
+    tester,
+  ) async {
+    final library = _NoopLibrary();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          initialPositionSeconds: 24,
+          viewerLibraryRepository: library,
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Pause'), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+
+    expect(find.byTooltip('Play'), findsOneWidget);
+    expect(library.savedEpisodeIds, contains('episode-6'));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.byTooltip('Pause'), findsOneWidget);
+  });
+
+  testWidgets('backgrounding preserves a viewer-initiated pause', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Pause'));
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(find.byTooltip('Play'), findsOneWidget);
+  });
 }
 
 const episode = CatalogueEpisode(
