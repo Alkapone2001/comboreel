@@ -48,6 +48,11 @@ select public.record_analytics_event(
   'cccccccc-cccc-cccc-cccc-cccccccccccc',
   'dddddddd-dddd-dddd-dddd-dddddddddddd', '{"position_seconds":0}'::jsonb
 );
+select public.record_analytics_event(
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'episode_completed', 'web',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'dddddddd-dddd-dddd-dddd-dddddddddddd', '{"position_seconds":60}'::jsonb
+);
 
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', true);
 
@@ -60,6 +65,12 @@ begin
   end if;
   if (summary ->> 'playback_starts')::integer <> 1 then
     raise exception 'expected one playback start: %', summary;
+  end if;
+  if (summary ->> 'completions')::integer <> 1 then
+    raise exception 'expected one episode completion: %', summary;
+  end if;
+  if (summary ->> 'completion_rate')::numeric <> 100.0 then
+    raise exception 'expected a 100 percent completion rate: %', summary;
   end if;
 end;
 $$;

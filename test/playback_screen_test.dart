@@ -1,4 +1,5 @@
 import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
+import 'package:comboreel/features/analytics/data/analytics_repository.dart';
 import 'package:comboreel/features/library/data/viewer_library_repository.dart';
 import 'package:comboreel/features/library/domain/viewer_progress.dart';
 import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
@@ -221,6 +222,35 @@ void main() {
 
     expect(find.text('0:45 / 1:30'), findsOneWidget);
     expect(library.savedPositions.last, 45);
+  });
+
+  testWidgets('completed progress emits one completion event per episode', (
+    tester,
+  ) async {
+    final analytics = _RecordingAnalyticsRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          analyticsRepository: analytics,
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final seek = find.byKey(const ValueKey('playback-seek'));
+    final rect = tester.getRect(seek);
+    await tester.tapAt(Offset(rect.right - 1, rect.center.dy));
+    await tester.pumpAndSettle();
+    await tester.tapAt(Offset(rect.right - 1, rect.center.dy));
+    await tester.pumpAndSettle();
+
+    expect(analytics.events, ['episode_completed']);
+    expect(analytics.episodeIds, ['episode-6']);
+    expect(analytics.positions, [90]);
   });
 
   testWidgets('player honors the preferred subtitle language', (tester) async {
@@ -526,5 +556,23 @@ class _NoopLibrary implements ViewerLibraryRepository {
   }) async {
     savedEpisodeIds.add(episodeId);
     savedPositions.add(positionSeconds);
+  }
+}
+
+class _RecordingAnalyticsRepository extends NoopAnalyticsRepository {
+  final List<String> events = [];
+  final List<String?> episodeIds = [];
+  final List<int?> positions = [];
+
+  @override
+  Future<void> track(
+    String event, {
+    String? seriesId,
+    String? episodeId,
+    Map<String, Object?> properties = const {},
+  }) async {
+    events.add(event);
+    episodeIds.add(episodeId);
+    positions.add(properties['position_seconds'] as int?);
   }
 }

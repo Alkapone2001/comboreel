@@ -73,6 +73,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   late int _positionSeconds;
   int _lastPersistedSecond = -1;
   int _loadGeneration = 0;
+  final Set<String> _trackedCompletions = {};
 
   bool get _isPlaying => _videoController?.value.isPlaying ?? _demoPlaying;
 
@@ -510,16 +511,29 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   Future<void> _saveProgress({bool? completed}) async {
     final viewerId = widget.viewerId;
     if (viewerId == null) return;
+    final episode = _episode;
+    final positionSeconds = _positionSeconds;
     final duration =
-        _videoController?.value.duration.inSeconds ?? _episode.durationSeconds;
+        _videoController?.value.duration.inSeconds ?? episode.durationSeconds;
+    final isCompleted =
+        completed ?? (duration > 0 && positionSeconds >= duration - 3);
     try {
       await widget.viewerLibraryRepository.saveProgress(
         userId: viewerId,
-        episodeId: _episode.id,
-        positionSeconds: _positionSeconds,
-        completed:
-            completed ?? (duration > 0 && _positionSeconds >= duration - 3),
+        episodeId: episode.id,
+        positionSeconds: positionSeconds,
+        completed: isCompleted,
       );
+      if (isCompleted && _trackedCompletions.add(episode.id)) {
+        unawaited(
+          widget.analyticsRepository.track(
+            'episode_completed',
+            seriesId: episode.seriesId,
+            episodeId: episode.id,
+            properties: {'position_seconds': positionSeconds},
+          ),
+        );
+      }
     } catch (_) {
       // Playback remains available when a best-effort progress write is offline.
     }
