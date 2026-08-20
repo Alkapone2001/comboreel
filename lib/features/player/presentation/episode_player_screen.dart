@@ -10,6 +10,8 @@ import '../../analytics/data/analytics_repository.dart';
 import '../../catalogue/domain/catalogue_episode.dart';
 import '../../library/data/viewer_library_repository.dart';
 import '../../monetization/data/monetization_repository.dart';
+import '../../monetization/data/rewarded_ad_service.dart';
+import '../../monetization/domain/rewarded_ad_claim.dart';
 import '../../preferences/data/viewer_preferences_repository.dart';
 import '../data/playback_repository.dart';
 import '../domain/playback_session.dart';
@@ -26,6 +28,7 @@ class EpisodePlayerScreen extends StatefulWidget {
     this.contentShareService = const NoopContentShareService(),
     this.preferencesRepository = const UnavailableViewerPreferencesRepository(),
     this.monetizationRepository,
+    this.rewardedAdService = const UnavailableRewardedAdService(),
     this.analyticsRepository = const NoopAnalyticsRepository(),
     this.onEpisodeChanged,
   });
@@ -39,6 +42,7 @@ class EpisodePlayerScreen extends StatefulWidget {
   final ContentShareService contentShareService;
   final ViewerPreferencesRepository preferencesRepository;
   final MonetizationRepository? monetizationRepository;
+  final RewardedAdService rewardedAdService;
   final AnalyticsRepository analyticsRepository;
   final ValueChanged<CatalogueEpisode>? onEpisodeChanged;
 
@@ -280,6 +284,72 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('The episode could not be unlocked.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _unlocking = false);
+    }
+  }
+
+  Future<void> _unlockWithRewardedAd() async {
+    final monetization = widget.monetizationRepository;
+    final userId = widget.viewerId;
+    if (monetization == null || _unlocking) return;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to unlock episodes with an ad.')),
+      );
+      return;
+    }
+    setState(() => _unlocking = true);
+    try {
+      final claim = await monetization.createRewardedEpisodeClaim(_episode.id);
+      await widget.rewardedAdService.show(userId: userId, claimId: claim.id);
+      var status = RewardedAdClaimStatus.pending;
+      final verificationDeadline = DateTime.now().toUtc().add(
+        const Duration(seconds: 20),
+      );
+      while (DateTime.now().toUtc().isBefore(verificationDeadline) &&
+          DateTime.now().toUtc().isBefore(claim.expiresAt) &&
+          status == RewardedAdClaimStatus.pending) {
+        status = await monetization.rewardedEpisodeClaimStatus(claim.id);
+        if (status == RewardedAdClaimStatus.pending) {
+          await Future<void>.delayed(const Duration(seconds: 1));
+        }
+      }
+      if (status != RewardedAdClaimStatus.verified) {
+        throw const RewardVerificationTimeoutException();
+      }
+      unawaited(
+        widget.analyticsRepository.track(
+          'rewarded_unlock_completed',
+          seriesId: _episode.seriesId,
+          episodeId: _episode.id,
+          properties: const {'method': 'rewarded_ad'},
+        ),
+      );
+      if (mounted) await _retrySession();
+    } on RewardedAdUnavailableException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } on RewardVerificationTimeoutException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Your reward is still being verified. Try again shortly.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The rewarded unlock could not be completed.'),
+          ),
         );
       }
     } finally {
@@ -607,6 +677,12 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
                 onRetry: () => unawaited(_retrySession()),
                 coinPrice: _episode.coinPrice,
                 unlocking: _unlocking,
+                onReward:
+                    _error == 'episode_locked' &&
+                        widget.monetizationRepository != null &&
+                        widget.rewardedAdService.isAvailable
+                    ? () => unawaited(_unlockWithRewardedAd())
+                    : null,
                 onUnlock:
                     _error == 'episode_locked' &&
                         widget.monetizationRepository != null
@@ -841,12 +917,14 @@ class _PlaybackError extends StatelessWidget {
     required this.onRetry,
     required this.coinPrice,
     required this.unlocking,
+    this.onReward,
     this.onUnlock,
   });
   final String code;
   final VoidCallback onRetry;
   final int coinPrice;
   final bool unlocking;
+  final VoidCallback? onReward;
   final VoidCallback? onUnlock;
 
   @override
@@ -881,6 +959,14 @@ class _PlaybackError extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
+          if (onReward != null) ...[
+            FilledButton.icon(
+              onPressed: unlocking ? null : onReward,
+              icon: const Icon(Icons.smart_display_rounded),
+              label: Text(unlocking ? 'Completing unlock…' : 'Watch an ad'),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (onUnlock != null) ...[
             FilledButton.icon(
               onPressed: unlocking ? null : onUnlock,

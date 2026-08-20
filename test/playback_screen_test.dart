@@ -2,6 +2,7 @@ import 'package:comboreel/features/catalogue/domain/catalogue_episode.dart';
 import 'package:comboreel/features/library/data/viewer_library_repository.dart';
 import 'package:comboreel/features/library/domain/viewer_progress.dart';
 import 'package:comboreel/features/monetization/data/offline_monetization_repository.dart';
+import 'package:comboreel/features/monetization/data/rewarded_ad_service.dart';
 import 'package:comboreel/features/player/data/playback_repository.dart';
 import 'package:comboreel/features/player/domain/playback_session.dart';
 import 'package:comboreel/features/player/presentation/episode_player_screen.dart';
@@ -74,6 +75,34 @@ void main() {
     expect(find.text('This episode is locked'), findsNothing);
     expect(playback.requests, 2);
     expect((await monetization.wallet('viewer')).balance, 20);
+  });
+
+  testWidgets('locked player verifies a rewarded ad before retrying', (
+    tester,
+  ) async {
+    final monetization = OfflineMonetizationRepository();
+    final playback = _EntitlementPlaybackRepository(monetization);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: playback,
+          monetizationRepository: monetization,
+          rewardedAdService: const DemoRewardedAdService(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('This episode is locked'), findsOneWidget);
+    await tester.tap(find.text('Watch an ad'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('This episode is locked'), findsNothing);
+    expect(playback.requests, 2);
+    expect((await monetization.wallet('viewer')).balance, 25);
   });
 
   testWidgets('failed session retries without losing the resume position', (

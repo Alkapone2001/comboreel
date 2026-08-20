@@ -212,6 +212,7 @@ class _AppShellState extends State<AppShell> {
           contentShareService: widget.services.contentShareService,
           preferencesRepository: widget.services.viewerPreferencesRepository,
           monetizationRepository: widget.services.monetizationRepository,
+          rewardedAdService: widget.services.rewardedAdService,
           analyticsRepository: widget.services.analyticsRepository,
           onEpisodeChanged: (next) => _trackPlayback(next, 0),
         ),
