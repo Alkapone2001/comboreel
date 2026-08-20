@@ -224,6 +224,17 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     }
   }
 
+  Future<void> _retrySession() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await _saveProgress();
+    if (!mounted) return;
+    await _loadSession();
+  }
+
   Future<void> _initializeVideo(
     Uri hlsUrl,
     SubtitleTrack? subtitle, {
@@ -277,6 +288,18 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   void _onVideoChanged() {
     final controller = _videoController;
     if (controller == null || !controller.value.isInitialized) return;
+    if (controller.value.hasError && _error == null) {
+      _demoPlaying = false;
+      unawaited(controller.pause());
+      unawaited(_saveProgress());
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'playback_interrupted';
+        });
+      }
+      return;
+    }
     final second = controller.value.position.inSeconds;
     if (second != _positionSeconds && mounted) {
       setState(() => _positionSeconds = second);
@@ -514,7 +537,10 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
             _VideoSurface(controller: controller),
             if (_loading) const Center(child: CircularProgressIndicator()),
             if (_error != null)
-              _PlaybackError(code: _error!, onRetry: _loadSession),
+              _PlaybackError(
+                code: _error!,
+                onRetry: () => unawaited(_retrySession()),
+              ),
             if (!_loading && _error == null)
               Center(
                 child: IconButton.filledTonal(
@@ -738,12 +764,19 @@ class _PlaybackError extends StatelessWidget {
             size: 42,
           ),
           const SizedBox(height: 12),
-          Text(
-            code == 'episode_locked'
-                ? 'This episode is locked'
-                : 'Video could not load',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text(switch (code) {
+            'episode_locked' => 'This episode is locked',
+            'playback_interrupted' => 'Connection interrupted',
+            _ => 'Video could not load',
+          }, style: Theme.of(context).textTheme.titleLarge),
+          if (code == 'playback_interrupted') ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Your position is saved. Check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.muted),
+            ),
+          ],
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: onRetry,

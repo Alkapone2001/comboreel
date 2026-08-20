@@ -48,6 +48,36 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
   });
 
+  testWidgets('failed session retries without losing the resume position', (
+    tester,
+  ) async {
+    final playback = _RecoveringPlaybackRepository();
+    final library = _NoopLibrary();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          initialPositionSeconds: 24,
+          viewerLibraryRepository: library,
+          playbackRepository: playback,
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Video could not load'), findsOneWidget);
+    expect(find.text('0:24'), findsOneWidget);
+
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Video could not load'), findsNothing);
+    expect(find.text('0:24'), findsOneWidget);
+    expect(playback.requests, 2);
+    expect(library.savedEpisodeIds, contains('episode-6'));
+  });
+
   testWidgets('player honors the preferred subtitle language', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -221,6 +251,17 @@ class _LockedPlaybackRepository implements PlaybackRepository {
   @override
   Future<PlaybackSession> createSession(String episodeId) =>
       Future.error(const PlaybackAccessException('episode_locked'));
+}
+
+class _RecoveringPlaybackRepository implements PlaybackRepository {
+  int requests = 0;
+
+  @override
+  Future<PlaybackSession> createSession(String episodeId) async {
+    requests++;
+    if (requests == 1) throw StateError('network_unavailable');
+    return const PlaybackSession(hlsUrl: null, expiresAt: null, subtitles: []);
+  }
 }
 
 class _MultipleSubtitlePlaybackRepository implements PlaybackRepository {
