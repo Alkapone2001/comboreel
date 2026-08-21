@@ -222,10 +222,14 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
             ? null
             : session.subtitles.where((track) => track.isDefault).firstOrNull;
       } else {
-        final preferredLanguage = await widget.preferencesRepository
-            .preferredSubtitleLanguage();
+        final preferences = await widget.preferencesRepository
+            .playbackPreferences();
+        _isMuted = preferences.muted;
+        _playbackSpeed = preferences.speed;
         selectedSubtitle = session.subtitles
-            .where((track) => track.languageCode == preferredLanguage)
+            .where(
+              (track) => track.languageCode == preferences.subtitleLanguage,
+            )
             .firstOrNull;
         selectedSubtitle ??= session.subtitles
             .where((track) => track.isDefault)
@@ -713,6 +717,7 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       await controller.setVolume(next ? 0 : 1);
     }
     if (mounted) setState(() => _isMuted = next);
+    await _savePlaybackControls();
   }
 
   Future<void> _choosePlaybackSpeed() async {
@@ -749,6 +754,23 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
       await controller.setPlaybackSpeed(selected);
     }
     if (mounted) setState(() => _playbackSpeed = selected);
+    await _savePlaybackControls();
+  }
+
+  Future<void> _savePlaybackControls() async {
+    try {
+      await widget.preferencesRepository.setPlaybackControls(
+        muted: _isMuted,
+        speed: _playbackSpeed,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Playback preference could not be saved.'),
+        ),
+      );
+    }
   }
 
   Future<void> _selectSubtitle(SubtitleTrack? track) async {

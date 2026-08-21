@@ -414,6 +414,7 @@ void main() {
   testWidgets('mute and playback speed persist across episode changes', (
     tester,
   ) async {
+    final preferences = OfflineViewerPreferencesRepository();
     await tester.pumpWidget(
       MaterialApp(
         home: EpisodePlayerScreen(
@@ -421,6 +422,7 @@ void main() {
           episodes: const [episode, nextEpisode],
           viewerLibraryRepository: _NoopLibrary(),
           playbackRepository: const _SubtitlePlaybackRepository(),
+          preferencesRepository: preferences,
           viewerId: 'viewer',
         ),
       ),
@@ -442,7 +444,24 @@ void main() {
 
     expect(find.text('EP 7'), findsOneWidget);
     expect(find.byTooltip('Unmute'), findsOneWidget);
-    expect(find.text('1.5×'), findsOneWidget);
+    expect(find.bySemanticsLabel('Playback speed 1.5 times'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          preferencesRepository: preferences,
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Unmute'), findsOneWidget);
+    expect(find.bySemanticsLabel('Playback speed 1.5 times'), findsOneWidget);
   });
 }
 
