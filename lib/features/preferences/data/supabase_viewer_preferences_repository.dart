@@ -14,11 +14,14 @@ class SupabaseViewerPreferencesRepository
     if (user == null) return const PlaybackPreferences();
     final profile = await _client
         .from('profiles')
-        .select('preferred_language, playback_muted, playback_speed')
+        .select(
+          'preferred_language, subtitles_enabled, playback_muted, playback_speed',
+        )
         .eq('id', user.id)
         .maybeSingle();
     return PlaybackPreferences(
       subtitleLanguage: profile?['preferred_language'] as String? ?? 'en',
+      subtitlesEnabled: profile?['subtitles_enabled'] as bool? ?? true,
       muted: profile?['playback_muted'] as bool? ?? false,
       speed: (profile?['playback_speed'] as num?)?.toDouble() ?? 1,
     );
@@ -34,7 +37,23 @@ class SupabaseViewerPreferencesRepository
     if (user == null) throw StateError('Sign in to save this preference.');
     await _client
         .from('profiles')
-        .update({'preferred_language': languageCode})
+        .update({'preferred_language': languageCode, 'subtitles_enabled': true})
+        .eq('id', user.id);
+  }
+
+  @override
+  Future<void> setSubtitlePreference({
+    required bool enabled,
+    String? languageCode,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) throw StateError('Sign in to save this preference.');
+    await _client
+        .from('profiles')
+        .update({
+          'subtitles_enabled': enabled,
+          'preferred_language': ?languageCode,
+        })
         .eq('id', user.id);
   }
 

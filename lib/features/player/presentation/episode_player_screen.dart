@@ -226,14 +226,16 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
             .playbackPreferences();
         _isMuted = preferences.muted;
         _playbackSpeed = preferences.speed;
-        selectedSubtitle = session.subtitles
-            .where(
-              (track) => track.languageCode == preferences.subtitleLanguage,
-            )
-            .firstOrNull;
-        selectedSubtitle ??= session.subtitles
-            .where((track) => track.isDefault)
-            .firstOrNull;
+        if (preferences.subtitlesEnabled) {
+          selectedSubtitle = session.subtitles
+              .where(
+                (track) => track.languageCode == preferences.subtitleLanguage,
+              )
+              .firstOrNull;
+          selectedSubtitle ??= session.subtitles
+              .where((track) => track.isDefault)
+              .firstOrNull;
+        }
       }
       if (session.hlsUrl != null) {
         await _initializeVideo(
@@ -775,12 +777,14 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
 
   Future<void> _selectSubtitle(SubtitleTrack? track) async {
     Navigator.of(context).pop();
-    final hlsUrl = _session?.hlsUrl;
-    if (hlsUrl == null || track == _selectedSubtitle) return;
+    if (track == _selectedSubtitle) return;
     setState(() {
       _selectedSubtitle = track;
-      _loading = true;
     });
+    await _saveSubtitlePreference(track);
+    final hlsUrl = _session?.hlsUrl;
+    if (hlsUrl == null || !mounted) return;
+    setState(() => _loading = true);
     try {
       await _initializeVideo(hlsUrl, track, session: _session);
     } catch (_) {
@@ -790,6 +794,22 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
           _error = 'subtitle_unavailable';
         });
       }
+    }
+  }
+
+  Future<void> _saveSubtitlePreference(SubtitleTrack? track) async {
+    try {
+      await widget.preferencesRepository.setSubtitlePreference(
+        enabled: track != null,
+        languageCode: track?.languageCode,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Subtitle preference could not be saved.'),
+        ),
+      );
     }
   }
 

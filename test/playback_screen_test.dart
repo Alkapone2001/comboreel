@@ -32,6 +32,42 @@ void main() {
     expect(find.text('Off'), findsOneWidget);
   });
 
+  testWidgets('subtitle off selection works offline and persists on reopen', (
+    tester,
+  ) async {
+    final preferences = OfflineViewerPreferencesRepository();
+
+    Widget player() => MaterialApp(
+      home: EpisodePlayerScreen(
+        episode: episode,
+        viewerLibraryRepository: _NoopLibrary(),
+        playbackRepository: const _SubtitlePlaybackRepository(),
+        preferencesRepository: preferences,
+        viewerId: 'viewer',
+      ),
+    );
+
+    await tester.pumpWidget(player());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Subtitles'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Off'));
+    await tester.pumpAndSettle();
+
+    expect((await preferences.playbackPreferences()).subtitlesEnabled, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(player());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Subtitles'));
+    await tester.pumpAndSettle();
+
+    final group = tester.widget<RadioGroup<SubtitleTrack?>>(
+      find.byType(RadioGroup<SubtitleTrack?>),
+    );
+    expect(group.groupValue, isNull);
+  });
+
   testWidgets('locked playback session presents an access error', (
     tester,
   ) async {
