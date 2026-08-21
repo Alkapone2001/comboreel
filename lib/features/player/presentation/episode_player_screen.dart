@@ -67,6 +67,8 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   bool _scrubbing = false;
   bool _unlocking = false;
   bool _refreshingSession = false;
+  bool _isMuted = false;
+  double _playbackSpeed = 1;
   String? _error;
   Timer? _sessionRefreshTimer;
   late final List<CatalogueEpisode> _episodes;
@@ -464,6 +466,8 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     if (session != null) _session = session;
     _videoController = controller;
     controller.addListener(_onVideoChanged);
+    await controller.setVolume(_isMuted ? 0 : 1);
+    await controller.setPlaybackSpeed(_playbackSpeed);
     if (shouldPlay) await controller.play();
     if (mounted) {
       setState(() {
@@ -702,6 +706,51 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     if (mounted) setState(() {});
   }
 
+  Future<void> _toggleMuted() async {
+    final next = !_isMuted;
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) {
+      await controller.setVolume(next ? 0 : 1);
+    }
+    if (mounted) setState(() => _isMuted = next);
+  }
+
+  Future<void> _choosePlaybackSpeed() async {
+    final selected = await showModalBottomSheet<double>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 20),
+          children: [
+            const ListTile(
+              title: Text(
+                'Playback speed',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            for (final speed in const [0.75, 1.0, 1.25, 1.5, 2.0])
+              ListTile(
+                key: ValueKey('playback-speed-$speed'),
+                title: Text(_formatSpeed(speed)),
+                trailing: speed == _playbackSpeed
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () => Navigator.of(context).pop(speed),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || selected == _playbackSpeed || !mounted) return;
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) {
+      await controller.setPlaybackSpeed(selected);
+    }
+    if (mounted) setState(() => _playbackSpeed = selected);
+  }
+
   Future<void> _selectSubtitle(SubtitleTrack? track) async {
     Navigator.of(context).pop();
     final hlsUrl = _session?.hlsUrl;
@@ -767,7 +816,11 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
+        key: const ValueKey('player-surface'),
         behavior: HitTestBehavior.opaque,
+        onTap: _loading || _transitioning || _error != null
+            ? null
+            : () => unawaited(_togglePlayback()),
         onVerticalDragEnd: _handleVerticalDrag,
         child: Stack(
           fit: StackFit.expand,
@@ -794,13 +847,19 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
               ),
             if (!_loading && _error == null)
               Center(
-                child: IconButton.filledTonal(
-                  onPressed: _togglePlayback,
-                  iconSize: 42,
-                  icon: Icon(
-                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                child: Opacity(
+                  opacity: _isPlaying ? 0 : 1,
+                  alwaysIncludeSemantics: true,
+                  child: IconButton.filledTonal(
+                    onPressed: _togglePlayback,
+                    iconSize: 42,
+                    icon: Icon(
+                      _isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                    ),
+                    tooltip: _isPlaying ? 'Pause' : 'Play',
                   ),
-                  tooltip: _isPlaying ? 'Pause' : 'Play',
                 ),
               ),
             SafeArea(
@@ -827,6 +886,21 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
                           onPressed: _showSubtitles,
                           icon: const Icon(Icons.closed_caption_rounded),
                           tooltip: 'Subtitles',
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          onPressed: () => unawaited(_toggleMuted()),
+                          icon: Icon(
+                            _isMuted
+                                ? Icons.volume_off_rounded
+                                : Icons.volume_up_rounded,
+                          ),
+                          tooltip: _isMuted ? 'Unmute' : 'Mute',
+                        ),
+                        const SizedBox(width: 8),
+                        _PlaybackSpeedButton(
+                          speed: _playbackSpeed,
+                          onTap: () => unawaited(_choosePlaybackSpeed()),
                         ),
                       ],
                     ),
@@ -984,12 +1058,49 @@ class _EpisodePlayerScreenState extends State<EpisodePlayerScreen>
   String _formatDuration(int seconds) =>
       '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
 
+  String _formatSpeed(double speed) =>
+      '${speed.toStringAsFixed(speed.truncateToDouble() == speed ? 0 : 2).replaceFirst(RegExp(r'0$'), '')}×';
+
   int get _effectiveDurationSeconds => _effectiveDurationSecondsFor(_episode);
 
   int _effectiveDurationSecondsFor(CatalogueEpisode episode) =>
       _session?.clipDuration?.inSeconds ??
       _videoController?.value.duration.inSeconds ??
       episode.durationSeconds;
+}
+
+class _PlaybackSpeedButton extends StatelessWidget {
+  const _PlaybackSpeedButton({required this.speed, required this.onTap});
+
+  final double speed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Playback speed',
+    child: Semantics(
+      button: true,
+      label: 'Playback speed $speed times',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            shape: BoxShape.circle,
+          ),
+          child: ExcludeSemantics(
+            child: Text(
+              '${speed.toStringAsFixed(speed == speed.roundToDouble() ? 0 : 2).replaceFirst(RegExp(r'0$'), '')}×',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _VideoSurface extends StatelessWidget {

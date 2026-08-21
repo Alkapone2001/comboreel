@@ -377,6 +377,73 @@ void main() {
 
     expect(find.byTooltip('Play'), findsOneWidget);
   });
+
+  testWidgets('tap-anywhere pauses without obscuring active playback', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final pauseOpacity = tester.widget<Opacity>(
+      find.ancestor(
+        of: find.byTooltip('Pause'),
+        matching: find.byType(Opacity),
+      ),
+    );
+    expect(pauseOpacity.opacity, 0);
+
+    await tester.tap(find.byKey(const ValueKey('player-surface')));
+    await tester.pump();
+
+    expect(find.byTooltip('Play'), findsOneWidget);
+    final playOpacity = tester.widget<Opacity>(
+      find.ancestor(of: find.byTooltip('Play'), matching: find.byType(Opacity)),
+    );
+    expect(playOpacity.opacity, 1);
+  });
+
+  testWidgets('mute and playback speed persist across episode changes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpisodePlayerScreen(
+          episode: episode,
+          episodes: const [episode, nextEpisode],
+          viewerLibraryRepository: _NoopLibrary(),
+          playbackRepository: const _SubtitlePlaybackRepository(),
+          viewerId: 'viewer',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Mute'));
+    await tester.pump();
+    expect(find.byTooltip('Unmute'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Playback speed'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('playback-speed-1.5')));
+    await tester.pumpAndSettle();
+    expect(find.text('1.5×'), findsOneWidget);
+
+    await tester.fling(find.byType(Scaffold), const Offset(0, -600), 1200);
+    await tester.pumpAndSettle();
+
+    expect(find.text('EP 7'), findsOneWidget);
+    expect(find.byTooltip('Unmute'), findsOneWidget);
+    expect(find.text('1.5×'), findsOneWidget);
+  });
 }
 
 const episode = CatalogueEpisode(
