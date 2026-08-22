@@ -76,6 +76,15 @@ migration; never edit an already-applied migration.
 
 ## Staging smoke test
 
+Run `tool/supabase_auth_rls_smoke.dart` from a trusted operator environment with
+`API_URL`, `ANON_KEY` (the publishable key), and `SERVER_API_KEY` (the secret key)
+set only in process memory. Hosted mode provisions confirmed disposable users so
+it does not send real email, verifies the core Auth/PostgREST and RLS boundaries,
+and deletes its temporary users and catalogue fixtures after a successful run.
+Never place `SERVER_API_KEY` in a client build, shell history, log, or repository.
+Recovery and email-change delivery must still be tested separately after staging
+SMTP and hosted Auth templates are configured.
+
 After deployment, record the commit SHA and verify:
 
 - `/`, `/privacy`, `/terms`, and `/delete-account` return successful HTTPS pages

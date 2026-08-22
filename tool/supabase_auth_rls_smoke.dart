@@ -6,38 +6,51 @@ import 'package:http/http.dart' as http;
 Future<void> main() async {
   final apiUrl = _requiredEnvironment('API_URL');
   final anonKey = _requiredEnvironment('ANON_KEY');
-  final serviceRoleKey = _requiredEnvironment('SERVICE_ROLE_KEY');
+  final serverApiKey =
+      Platform.environment['SERVER_API_KEY'] ??
+      _requiredEnvironment('SERVICE_ROLE_KEY');
+  final serverBearer = serverApiKey.startsWith('sb_secret_')
+      ? null
+      : serverApiKey;
+  final hosted = serverApiKey.startsWith('sb_secret_');
   final runId = DateTime.now().microsecondsSinceEpoch;
+  final domain = hosted ? 'outlook.com' : 'comboreel.local';
 
   final first = await _signUp(
     apiUrl,
     anonKey,
-    'rls-a-$runId@comboreel.local',
+    'comboreel-rls-a-$runId@$domain',
     'Viewer A',
+    serverApiKey: hosted ? serverApiKey : null,
   );
   final second = await _signUp(
     apiUrl,
     anonKey,
-    'rls-b-$runId@comboreel.local',
+    'comboreel-rls-b-$runId@$domain',
     'Viewer B',
+    serverApiKey: hosted ? serverApiKey : null,
   );
 
-  await _request(
-    'POST',
-    Uri.parse('$apiUrl/auth/v1/recover'),
-    apiKey: anonKey,
-    body: {'email': first.email},
-    expectedStatus: 200,
-    description: 'existing account can request password recovery',
-  );
-  await _request(
-    'POST',
-    Uri.parse('$apiUrl/auth/v1/recover'),
-    apiKey: anonKey,
-    body: {'email': 'missing-$runId@comboreel.local'},
-    expectedStatus: 200,
-    description: 'recovery does not reveal missing accounts',
-  );
+  if (!hosted) {
+    await _request(
+      'POST',
+      Uri.parse('$apiUrl/auth/v1/recover'),
+      apiKey: anonKey,
+      body: {'email': first.email},
+      expectedStatus: 200,
+      description: 'existing account can request password recovery',
+    );
+  }
+  if (!hosted) {
+    await _request(
+      'POST',
+      Uri.parse('$apiUrl/auth/v1/recover'),
+      apiKey: anonKey,
+      body: {'email': 'comboreel-missing-$runId@$domain'},
+      expectedStatus: 200,
+      description: 'recovery does not reveal missing accounts',
+    );
+  }
 
   await _expectRows(
     apiUrl,
@@ -74,15 +87,17 @@ Future<void> main() async {
     expectedStatus: 204,
     description: 'viewer can update own display name',
   );
-  await _request(
-    'PUT',
-    Uri.parse('$apiUrl/auth/v1/user?redirect_to=http://127.0.0.1:7357'),
-    apiKey: anonKey,
-    bearer: first.token,
-    body: {'email': 'updated-$runId@comboreel.local'},
-    expectedStatus: 200,
-    description: 'email change requires confirmation through Auth',
-  );
+  if (!hosted) {
+    await _request(
+      'PUT',
+      Uri.parse('$apiUrl/auth/v1/user?redirect_to=http://127.0.0.1:7357'),
+      apiKey: anonKey,
+      bearer: first.token,
+      body: {'email': 'comboreel-updated-$runId@$domain'},
+      expectedStatus: 200,
+      description: 'email change requires confirmation through Auth',
+    );
+  }
   await _request(
     'PATCH',
     Uri.parse('$apiUrl/rest/v1/profiles?id=eq.${first.id}'),
@@ -98,8 +113,8 @@ Future<void> main() async {
   await _request(
     'POST',
     Uri.parse('$apiUrl/rest/v1/series?on_conflict=id'),
-    apiKey: serviceRoleKey,
-    bearer: serviceRoleKey,
+    apiKey: serverApiKey,
+    bearer: serverBearer,
     headers: {'Prefer': 'resolution=merge-duplicates'},
     body: [
       {
@@ -134,8 +149,8 @@ Future<void> main() async {
   await _request(
     'POST',
     Uri.parse('$apiUrl/rest/v1/episodes?on_conflict=id'),
-    apiKey: serviceRoleKey,
-    bearer: serviceRoleKey,
+    apiKey: serverApiKey,
+    bearer: serverBearer,
     headers: {'Prefer': 'resolution=merge-duplicates'},
     body: {
       'id': '20000000-0000-4000-8000-000000000001',
@@ -154,8 +169,8 @@ Future<void> main() async {
   await _request(
     'PATCH',
     Uri.parse('$apiUrl/rest/v1/series?id=eq.$publishedId'),
-    apiKey: serviceRoleKey,
-    bearer: serviceRoleKey,
+    apiKey: serverApiKey,
+    bearer: serverBearer,
     body: {
       'status': 'published',
       'published_at': DateTime.now().toUtc().toIso8601String(),
@@ -209,15 +224,69 @@ Future<void> main() async {
     description: 'authenticated viewer can update password securely',
   );
 
-  stdout.writeln('Local Supabase Auth/RLS smoke test passed (18 checks).');
+  await _request(
+    'DELETE',
+    Uri.parse('$apiUrl/rest/v1/series?id=in.($publishedId,$draftId)'),
+    apiKey: serverApiKey,
+    bearer: serverBearer,
+    expectedStatus: 204,
+    description: 'remove smoke catalogue fixtures',
+  );
+  await _request(
+    'DELETE',
+    Uri.parse('$apiUrl/auth/v1/admin/users/${first.id}'),
+    apiKey: serverApiKey,
+    bearer: serverBearer,
+    expectedStatus: 200,
+    description: 'remove staging user Viewer A',
+  );
+  await _request(
+    'DELETE',
+    Uri.parse('$apiUrl/auth/v1/admin/users/${second.id}'),
+    apiKey: serverApiKey,
+    bearer: serverBearer,
+    expectedStatus: 200,
+    description: 'remove staging user Viewer B',
+  );
+
+  stdout.writeln('Supabase Auth/RLS smoke test passed and cleaned up.');
 }
 
 Future<_Session> _signUp(
   String apiUrl,
   String anonKey,
   String email,
-  String displayName,
-) async {
+  String displayName, {
+  String? serverApiKey,
+}) async {
+  if (serverApiKey != null) {
+    await _request(
+      'POST',
+      Uri.parse('$apiUrl/auth/v1/admin/users'),
+      apiKey: serverApiKey,
+      body: {
+        'email': email,
+        'password': 'ComboReel-Test-2026!',
+        'email_confirm': true,
+        'user_metadata': {
+          'display_name': displayName,
+          'privacy_version': '2026-08-19',
+          'terms_version': '2026-08-19',
+        },
+      },
+      expectedStatus: 200,
+      description: 'provision confirmed staging user $displayName',
+    );
+    final session = await _request(
+      'POST',
+      Uri.parse('$apiUrl/auth/v1/token?grant_type=password'),
+      apiKey: anonKey,
+      body: {'email': email, 'password': 'ComboReel-Test-2026!'},
+      expectedStatus: 200,
+      description: 'sign in $displayName',
+    );
+    return _sessionFromResponse(session, email);
+  }
   final response = await _request(
     'POST',
     Uri.parse('$apiUrl/auth/v1/signup'),
@@ -234,6 +303,10 @@ Future<_Session> _signUp(
     expectedStatus: 200,
     description: 'sign up $displayName',
   );
+  return _sessionFromResponse(response, email);
+}
+
+_Session _sessionFromResponse(http.Response response, String email) {
   final body = jsonDecode(response.body) as Map<String, dynamic>;
   final user = body['user'] as Map<String, dynamic>?;
   final token = body['access_token'] as String?;

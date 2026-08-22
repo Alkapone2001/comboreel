@@ -27,6 +27,18 @@ hosted environment or commit hosted project secrets.
 4. Use the publishable key in Flutter. Never ship the secret/service-role key; it belongs only in trusted server or Edge Function environments.
 5. Promote the same reviewed migrations to production; do not edit production schema by hand.
 
+## Hosted Auth/RLS verification
+
+From a trusted operator environment, run `tool/supabase_auth_rls_smoke.dart` with
+`API_URL`, `ANON_KEY` (the hosted publishable key), and `SERVER_API_KEY` (the
+hosted secret key) set only for that process. The hosted path creates confirmed
+disposable users without sending email, verifies catalogue visibility, profile
+and favourite isolation, protected role assignment, signup consent, and password
+updates, then removes its users and catalogue fixtures after a successful run.
+Email recovery and email-change delivery are intentionally local-only in this
+script until hosted SMTP is configured and must be verified separately before
+release. Never pass the secret key through Flutter or commit it to the repository.
+
 ## Security model
 
 - Anonymous clients can only read published catalogue metadata.
