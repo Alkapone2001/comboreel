@@ -49,4 +49,34 @@ void main() {
 
     expect(await repository.preferredSubtitleLanguage(), 'es');
   });
+
+  testWidgets('playback defaults are configurable from profile settings', (
+    tester,
+  ) async {
+    final repository = OfflineViewerPreferencesRepository();
+    await tester.pumpWidget(
+      MaterialApp(home: PlaybackPreferencesScreen(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('subtitles-enabled')));
+    await tester.pumpAndSettle();
+    expect((await repository.playbackPreferences()).subtitlesEnabled, isFalse);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    final muted = find.byKey(const ValueKey('start-muted'));
+    await tester.tap(muted);
+    await tester.pumpAndSettle();
+
+    final speed = find.byKey(const ValueKey('default-speed-1.5'));
+    await tester.ensureVisible(speed);
+    await tester.tap(speed);
+    await tester.pumpAndSettle();
+
+    final preferences = await repository.playbackPreferences();
+    expect(preferences.muted, isTrue);
+    expect(preferences.speed, 1.5);
+  });
 }

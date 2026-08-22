@@ -554,8 +554,8 @@ class _SignedInProfile extends StatelessWidget {
           onTap: onOpenPremium,
         ),
         _ProfileTile(
-          icon: Icons.language_rounded,
-          title: 'Language & subtitles',
+          icon: Icons.play_circle_outline_rounded,
+          title: 'Playback preferences',
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute<void>(
