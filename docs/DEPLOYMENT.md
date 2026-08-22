@@ -69,6 +69,14 @@ deploying `build/web`. `_headers` and `_redirects` are included in the artifact.
    the authenticated `stripe-checkout` portal action and must not be replaced by
    a static customer URL.
 
+Functions that rely only on Supabase may be deployed and verified before provider
+provisioning. Staging has `push-device` deployed with
+gateway JWT verification disabled; its anonymous rejection and authenticated
+register/disable lifecycle have passed against the hosted database. Do not deploy
+the remaining functions merely to make them appear active: first configure every
+required origin and provider secret listed in `supabase/functions/README.md`, then
+exercise the corresponding provider test flow.
+
 Database migrations are forward-only. Before production migration, take a
 provider backup/PITR checkpoint, review lock/runtime impact, and rehearse on a
 production-shaped staging copy. Correct a failed released migration with a new
