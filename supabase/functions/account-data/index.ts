@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 const cors = (request: Request) => {
   const origin = request.headers.get("origin");
@@ -15,7 +16,7 @@ const json = (request: Request, status: number, body: unknown) => new Response(J
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors(request), "access-control-allow-headers": "authorization, apikey, content-type, x-client-info", "access-control-allow-methods": "POST, OPTIONS", "access-control-max-age": "86400" } });
   if (request.method !== "POST") return json(request, 405, { error: "method_not_allowed" });
-  const url = Deno.env.get("SUPABASE_URL"), anon = Deno.env.get("SUPABASE_ANON_KEY"), serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const url = Deno.env.get("SUPABASE_URL"), anon = supabasePublishableKey(), serviceKey = supabaseSecretKey();
   const authorization = request.headers.get("authorization");
   if (!url || !anon || !serviceKey) return json(request, 503, { error: "server_not_configured" });
   if (!authorization) return json(request, 401, { error: "authentication_required" });

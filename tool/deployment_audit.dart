@@ -94,6 +94,36 @@ void main() {
   );
 
   final authConfig = read('supabase/config.toml');
+  final functionSources = Directory('supabase/functions')
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((file) => file.path.endsWith('.ts'));
+  for (final file in functionSources) {
+    final source = file.readAsStringSync();
+    require(
+      !source.contains('SUPABASE_ANON_KEY') &&
+          !source.contains('SUPABASE_SERVICE_ROLE_KEY'),
+      'Legacy Supabase API key reference remains in ${file.path}.',
+    );
+  }
+  for (final functionName in [
+    'playback-session',
+    'verify-mobile-purchase',
+    'stripe-checkout',
+    'push-device',
+    'send-push-campaign',
+    'account-data',
+    'admin-stream',
+    'rewarded-ad-callback',
+    'stripe-webhook',
+    'apple-store-notifications',
+    'google-play-notifications',
+  ]) {
+    require(
+      authConfig.contains('[functions.$functionName]\nverify_jwt = false'),
+      '$functionName must use explicit in-function authentication.',
+    );
+  }
   final authTemplates = <String, String>{
     'confirmation': 'supabase/templates/confirmation.html',
     'recovery': 'supabase/templates/recovery.html',

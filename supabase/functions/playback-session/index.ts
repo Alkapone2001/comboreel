@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 type PlaybackRequest = { episode_id?: string };
 
@@ -39,8 +40,8 @@ Deno.serve(async (request) => {
   if (requestOrigin && !responseOrigin) return json({ error: "origin_not_allowed" }, 403, null);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const publishableKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const publishableKey = supabasePublishableKey();
+  const serviceRoleKey = supabaseSecretKey();
   const accountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
   const apiToken = Deno.env.get("CLOUDFLARE_STREAM_API_TOKEN");
   const customerCode = Deno.env.get("CLOUDFLARE_STREAM_CUSTOMER_CODE");

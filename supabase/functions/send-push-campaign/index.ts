@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 const encoder = new TextEncoder();
 const json = (status: number, body: Record<string, unknown>) => new Response(
@@ -59,8 +60,8 @@ Deno.serve(async (request) => {
   });
   if (request.method !== "POST") return json(405, { error: "method_not_allowed" });
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = supabasePublishableKey();
+  const serviceKey = supabaseSecretKey();
   const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
   const serviceEmail = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_EMAIL");
   const privateKey = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY");

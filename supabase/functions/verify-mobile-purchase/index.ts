@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 type ProductKind = "coin_pack" | "premium_subscription";
 type VerifiedPurchase = {
@@ -197,7 +198,7 @@ Deno.serve(async (request) => {
   try {
     const authorization = request.headers.get("authorization") ?? "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const userClient = createClient(supabaseUrl, supabasePublishableKey(), {
       global: { headers: { authorization } }, auth: { persistSession: false },
     });
     const { data: { user }, error: userError } = await userClient.auth.getUser();
@@ -210,7 +211,7 @@ Deno.serve(async (request) => {
     if (!platform || !body.product_id || !body.verification_data) {
       return response(400, { error: "invalid_purchase_payload" });
     }
-    const service = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    const service = createClient(supabaseUrl, supabaseSecretKey(), {
       auth: { persistSession: false },
     });
     const { data: product, error: productError } = await service.from("store_products")

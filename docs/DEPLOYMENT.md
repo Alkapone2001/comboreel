@@ -45,22 +45,27 @@ deploying `build/web`. `_headers` and `_redirects` are included in the artifact.
    CI proves they apply cleanly to PostgreSQL 16 before merge.
 3. Configure function secrets from `supabase/functions/README.md`. Use a separate,
    least-privilege credential for every provider where supported.
-4. Deploy authenticated functions with gateway JWT verification enabled:
+4. Deploy viewer-facing functions with gateway JWT verification disabled because
+   publishable/secret API keys are not JWTs; each function validates the caller
+   token with `auth.getUser()`:
    `playback-session`, `verify-mobile-purchase`, `stripe-checkout`, `admin-stream`,
    `push-device`, `send-push-campaign`, and `account-data`.
-5. Deploy provider callbacks with gateway verification disabled only where the
+5. Deploy provider callbacks with gateway verification disabled; each callback
    function independently authenticates the provider: `rewarded-ad-callback`,
    `stripe-webhook`, `apple-store-notifications`, and
    `google-play-notifications`.
-6. Set `ALLOWED_ORIGINS` to exact staging/production origins. Never use `*` on
+6. Confirm `SUPABASE_PUBLISHABLE_KEYS` and `SUPABASE_SECRET_KEYS` exist in the
+   hosted function environment. Legacy JWT-based API keys are unsupported and
+   must remain disabled.
+7. Set `ALLOWED_ORIGINS` to exact staging/production origins. Never use `*` on
    account, admin, playback, or purchase operations.
-7. Register callback URLs in AdMob, Stripe, App Store Connect, Google Cloud Pub/Sub,
+8. Register callback URLs in AdMob, Stripe, App Store Connect, Google Cloud Pub/Sub,
    and Firebase, then retain provider test event IDs as evidence.
-8. Copy the version-controlled files in `supabase/templates/` into hosted Auth
+9. Copy the version-controlled files in `supabase/templates/` into hosted Auth
    Email Templates, enable password/email-change security notifications, and
    configure production SMTP. Disable provider link tracking because rewritten
    confirmation URLs can invalidate Supabase Auth actions.
-9. Configure and test the Apple/Google subscription-management URLs. Stripe uses
+10. Configure and test the Apple/Google subscription-management URLs. Stripe uses
    the authenticated `stripe-checkout` portal action and must not be replaced by
    a static customer URL.
 

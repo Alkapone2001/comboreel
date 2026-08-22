@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 const encoder = new TextEncoder();
 
@@ -87,7 +88,7 @@ Deno.serve(async (request) => {
       id: string; type: string; created: number; data: { object: Record<string, any> };
     };
     const service = createClient(
-      Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_URL")!, supabaseSecretKey(),
       { auth: { persistSession: false } },
     );
     const object = event.data.object;

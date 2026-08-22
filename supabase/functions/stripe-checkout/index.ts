@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 const stripeRoot = "https://api.stripe.com/v1";
 
@@ -79,12 +80,12 @@ Deno.serve(async (request) => {
   try {
     const authorization = request.headers.get("authorization") ?? "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const userClient = createClient(supabaseUrl, supabasePublishableKey(), {
       global: { headers: { authorization } }, auth: { persistSession: false },
     });
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) return json(401, { error: "authentication_required" }, origin);
-    const service = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    const service = createClient(supabaseUrl, supabaseSecretKey(), {
       auth: { persistSession: false },
     });
     const body = await request.json() as { action?: string; product_id?: string };

@@ -23,7 +23,7 @@ deletion.
 - Configure production URL overrides where needed and verify cancellation wording
   and redirect behavior with Apple, Google, and Stripe sandbox subscriptions.
 - Deploy `account-data` with gateway JWT verification enabled. Confirm
-  `SUPABASE_SERVICE_ROLE_KEY` is platform-managed and `STRIPE_SECRET_KEY` exists
+  `SUPABASE_SECRET_KEYS` is platform-managed and `STRIPE_SECRET_KEY` exists
   only where Stripe billing is enabled.
 - Apply migration `202608190009_privacy_lifecycle.sql`, then test new signup,
   preference withdrawal, export, deletion with no subscription, and deletion with

@@ -442,3 +442,38 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# New publishable/secret API keys are not JWTs. Every function therefore
+# performs its own user or provider authentication before privileged work.
+[functions.playback-session]
+verify_jwt = false
+
+[functions.verify-mobile-purchase]
+verify_jwt = false
+
+[functions.stripe-checkout]
+verify_jwt = false
+
+[functions.push-device]
+verify_jwt = false
+
+[functions.send-push-campaign]
+verify_jwt = false
+
+[functions.account-data]
+verify_jwt = false
+
+[functions.admin-stream]
+verify_jwt = false
+
+[functions.rewarded-ad-callback]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.apple-store-notifications]
+verify_jwt = false
+
+[functions.google-play-notifications]
+verify_jwt = false

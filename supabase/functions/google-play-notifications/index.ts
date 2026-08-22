@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 const encoder = new TextEncoder();
 
@@ -81,7 +82,7 @@ Deno.serve(async (request) => {
     }
     if (notification.testNotification) return json(200, { received: true, test: true });
     const service = createClient(
-      Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_URL")!, supabaseSecretKey(),
       { auth: { persistSession: false } },
     );
     const { data: priorEvent } = await service.from("mobile_provider_events")

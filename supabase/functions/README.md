@@ -1,5 +1,12 @@
 # Edge Functions
 
+All functions use Supabase's publishable and secret API key dictionaries through
+`_shared/supabase_keys.ts`; legacy JWT-based `anon` and `service_role` keys are
+unsupported. New API keys are not JWTs, so every function is deployed with
+gateway JWT verification disabled. Viewer-facing functions validate the caller's
+bearer token with `auth.getUser()`; provider callbacks independently verify the
+provider signature or OIDC identity.
+
 ## playback-session
 
 Authorizes a published episode, checks entitlements for locked content, requests a short-lived Cloudflare Stream token, and returns a non-cacheable HLS manifest URL plus subtitle tracks.
@@ -11,9 +18,9 @@ Required secrets:
 - `CLOUDFLARE_STREAM_CUSTOMER_CODE`
 - `ALLOWED_ORIGINS` as a comma-separated staging/production allowlist
 
-Supabase provides its URL, anon key, and service-role key to hosted Edge Functions. Never expose the Cloudflare token or service-role key to Flutter.
+Supabase provides its URL and named publishable/secret key dictionaries to hosted Edge Functions. Never expose the Cloudflare token or secret key to Flutter.
 
-Deploy with JWT verification enabled. Private episodes require an authenticated user; free published episodes may receive a playback session without a user entitlement.
+Deploy with gateway JWT verification disabled; the function validates any caller token itself. Private episodes require an authenticated user; free published episodes may receive a playback session without a user entitlement.
 
 ## rewarded-ad-callback
 
@@ -31,7 +38,7 @@ reward amount `1` and reward item `episode_unlock`.
 Authenticates the ComboReel viewer, looks up the server-owned product mapping,
 and verifies the transaction directly with Google Play Developer API or Apple
 App Store Server API before calling the service-role-only fulfillment RPC.
-Deploy with JWT verification enabled.
+Deploy with gateway JWT verification disabled; the function authenticates the viewer with `auth.getUser()`.
 
 Required secrets:
 
@@ -51,7 +58,7 @@ Purchase key. Store PEM newlines either literally or as escaped `\\n` values.
 
 Provides the authenticated web catalogue, creates Stripe-hosted Checkout
 Sessions, creates/owns Stripe Customers, and creates short-lived Billing Portal
-sessions. Deploy with JWT verification enabled. Set `STRIPE_SECRET_KEY`,
+sessions. Deploy with gateway JWT verification disabled and explicit `auth.getUser()` validation. Set `STRIPE_SECRET_KEY`,
 `STRIPE_PRICE_MAP`, `WEB_APP_ORIGIN`, and `WEB_APP_URL`.
 
 ## stripe-webhook
@@ -89,13 +96,13 @@ value. It reuses the Google service-account and package secrets documented above
 ## push-device
 
 Registers, refreshes, or disables Firebase device tokens for the authenticated
-viewer. Deploy with JWT verification enabled. Supabase-provided secrets are
+viewer. Deploy with gateway JWT verification disabled and explicit `auth.getUser()` validation. Supabase-provided keys are
 sufficient; token rows remain service-owned and unreadable to Flutter.
 
 ## send-push-campaign
 
 Claims one reviewed draft and delivers it to currently opted-in devices through
-FCM HTTP v1. Deploy with JWT verification enabled and set
+FCM HTTP v1. Deploy with gateway JWT verification disabled and explicit `auth.getUser()` validation; set
 `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_EMAIL`, and
 `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`. Use a dedicated service account granted
 only the Firebase Cloud Messaging send permission.
@@ -106,6 +113,6 @@ Authenticates the viewer and provides a portable JSON export, active-subscriptio
 deletion preview, and irreversible account deletion. Deletion requires a JWT
 issued within ten minutes, disables push devices, deletes a linked Stripe customer
 when configured, and removes the Supabase Auth user so cascading application data
-is erased. Deploy with JWT verification enabled, set `ALLOWED_ORIGINS` to the
+is erased. Deploy with gateway JWT verification disabled and explicit `auth.getUser()` validation; set `ALLOWED_ORIGINS` to the
 exact staging/production web origins, and set `STRIPE_SECRET_KEY` when web billing
 is enabled.

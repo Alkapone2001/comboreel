@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 type RequestBody = {
   action?: "create_upload" | "status";
@@ -41,8 +42,8 @@ Deno.serve(async (request) => {
   if (origin && !responseOrigin) return json({ error: "origin_not_allowed" }, 403);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = supabasePublishableKey();
+  const serviceKey = supabaseSecretKey();
   const accountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
   const apiToken = Deno.env.get("CLOUDFLARE_STREAM_API_TOKEN");
   if (!supabaseUrl || !anonKey || !serviceKey || !accountId || !apiToken) {

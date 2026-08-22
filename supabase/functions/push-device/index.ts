@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabasePublishableKey, supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 const json = (status: number, body: Record<string, unknown>) => new Response(
   JSON.stringify(body),
@@ -20,8 +21,8 @@ Deno.serve(async (request) => {
   });
   if (request.method !== "POST") return json(405, { error: "method_not_allowed" });
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = supabasePublishableKey();
+  const serviceKey = supabaseSecretKey();
   if (!supabaseUrl || !anonKey || !serviceKey) return json(503, { error: "server_not_configured" });
   const authorization = request.headers.get("authorization");
   if (!authorization) return json(401, { error: "authentication_required" });

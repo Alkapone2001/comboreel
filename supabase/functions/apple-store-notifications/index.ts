@@ -4,6 +4,7 @@ import {
   SignedDataVerifier,
 } from "npm:@apple/app-store-server-library@3";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { supabaseSecretKey } from "../_shared/supabase_keys.ts";
 
 function json(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
@@ -67,7 +68,7 @@ Deno.serve(async (request) => {
     const transactionId = transaction.transactionId;
     if (!productId || !transactionId) throw new Error("apple_transaction_fields_missing");
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_URL")!, supabaseSecretKey(),
       { auth: { persistSession: false } },
     );
     const { data: product } = await supabase.from("store_products")
