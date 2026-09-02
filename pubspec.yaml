@@ -39,12 +39,12 @@ dependencies:
   http: ^1.6.0
   google_mobile_ads: ^9.1.0
   in_app_purchase: ^3.3.0
-  in_app_purchase_android: ^0.5.2
+  in_app_purchase_android: ^0.5.3
   url_launcher: ^6.3.2
   file_selector: ^1.0.4
   tusc: ^4.0.0
-  firebase_core: ^4.2.1
-  firebase_messaging: ^16.0.4
+  firebase_core: ^4.14.0
+  firebase_messaging: ^16.6.0
   app_links: ^7.2.1
   share_plus: ^13.3.0
 
