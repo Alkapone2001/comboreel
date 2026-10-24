@@ -39,7 +39,7 @@ jobs:
           dart run tool/release_audit.dart
           dart run tool/store_audit.dart
       - name: Upload immutable web artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: comboreel-web-${{ github.sha }}
           path: build/web
@@ -134,7 +134,7 @@ jobs:
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
       - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: comboreel-android-ci-signed-${{ github.sha }}
           path: |
@@ -169,7 +169,7 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$APP/Info.plist")" = "comboreel"
           test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")" = "15.0"
       - name: Upload unsigned iOS application
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: comboreel-ios-unsigned-${{ github.sha }}
           path: build/ios/iphoneos/Runner.app
